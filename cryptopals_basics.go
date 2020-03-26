@@ -16,6 +16,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"bufio"
+	"strings"
+	// "io"
+	// "io/ioutil"
 	// "bytes"
 	"math"
 	// "log"
@@ -28,7 +32,10 @@ type decipheredData struct {
 
 func main() {
 	var challengeNumber string = os.Args[1]
-	var input string = os.Args[2]
+	var input string
+	if len(os.Args) > 2 { 
+		input = os.Args[2]
+	}
 	if challengeNumber == "1" { 
 		var output string = hexTo64(input)
 		fmt.Println(output)
@@ -41,7 +48,9 @@ func main() {
 		fmt.Println(string(solution.Candidate))
 		fmt.Println(solution.Score)
 	} else if challengeNumber == "4" {
-
+		solution := computeMeaningfulString()
+		fmt.Println(string(solution.Candidate))
+		fmt.Println(solution.Score)
 	}
 	return
 }
@@ -178,4 +187,31 @@ func decodeXORCipher(input string) decipheredData {
 	}
 	data := decipheredData{Candidate: candidateOutput, Score: bestTextScore}
 	return data 
+}
+
+//challenge4 main.. piggybacks on 3
+func computeMeaningfulString() decipheredData { 
+	f, err := os.Open("challenge4.txt")
+	if err != nil {
+		panic(err)
+	}
+	var line string
+	reader := bufio.NewReader(f)
+	bestCandidate := make([]byte, 30)
+	var bestScore float64 = math.MaxFloat64
+	for {
+        line, err = reader.ReadString('\n')
+		if err != nil {
+            break
+		}
+		line = strings.TrimSuffix(line, "\n")
+		//should say 60 for each line
+		// fmt.Printf(" > Read %d characters\n", len(line))
+		data := decodeXORCipher(line)
+		if data.Score < bestScore { 
+			bestScore = data.Score
+			bestCandidate = data.Candidate
+		}
+    }
+	return decipheredData{Candidate: bestCandidate, Score: bestScore} 
 }
