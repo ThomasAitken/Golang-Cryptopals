@@ -51,6 +51,26 @@ func main() {
 		solution := computeMeaningfulString()
 		fmt.Println(string(solution.Candidate))
 		fmt.Println(solution.Score)
+	} else if challengeNumber == "5" {
+		f, err := os.Open("iceicebaby.txt")
+		if err != nil {
+			panic(err)
+		}
+		var output string
+		reader := bufio.NewReader(f)
+		var input string
+		var line string
+		for {
+			line, err = reader.ReadString('\n')
+			input += line
+			// line = strings.TrimSuffix(line, "\n")
+			if err != nil {
+				break
+			}
+			fmt.Println(input)
+		}
+		output = repeatingKeyXOR(input)
+		fmt.Println(output)
 	}
 	return
 }
@@ -201,17 +221,37 @@ func computeMeaningfulString() decipheredData {
 	var bestScore float64 = math.MaxFloat64
 	for {
         line, err = reader.ReadString('\n')
-		if err != nil {
-            break
-		}
 		line = strings.TrimSuffix(line, "\n")
 		//should say 60 for each line
 		// fmt.Printf(" > Read %d characters\n", len(line))
 		data := decodeXORCipher(line)
+		if err != nil {
+            break
+		}
 		if data.Score < bestScore { 
 			bestScore = data.Score
 			bestCandidate = data.Candidate
 		}
     }
 	return decipheredData{Candidate: bestCandidate, Score: bestScore} 
+}
+
+//challenge5 main
+func repeatingKeyXOR(input string) string { 
+	inputBytes := []byte(input)
+	outputBytes := make([]byte, len(inputBytes))
+	var tern int8
+	for i := 0; i < len(inputBytes); i++ {
+		if tern == 0 {
+			outputBytes[i] = inputBytes[i] ^ 'I'
+			tern ++	
+		} else if tern == 1 {
+			outputBytes[i] = inputBytes[i] ^ 'C'
+			tern ++
+		} else { 
+			outputBytes[i] = inputBytes[i] ^ 'E'
+			tern = 0
+		}
+	}
+	return hex.EncodeToString(outputBytes)
 }
