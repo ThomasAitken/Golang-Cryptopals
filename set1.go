@@ -1,13 +1,19 @@
 package main
 
 //Things I've learnt about Go that are highly relevant to this set of tasks:
-	/* • Strings are underlyingly byte slices, by default represented in Base 10 elements:
-			→ If the character is in ASCII 0-255 [1-byte ASCII], then stringBytes[i] is its ASCII # in decimal 
-			→ In the case of Hex strings, each byte represents precisely two characters (because Hex is 4-bit)
-	   • A rune is an alias for int32 (even though they can look like chars), and since bytes function like int8, ASCII runes are essentially the same as bytes (only more capacious). 
-	   • As a result of these facts, these types are easily intertranslatable!
+	/* • Strings are underlyingly byte slices, by default represented in Base 10
+	 	elements: 
+			→ If the character is in ASCII 0-255 [1-byte ASCII], then
+			stringBytes[i] is its ASCII # in decimal 
+			→ In the case of Hex strings, each byte represents precisely two characters (because Hex
+			is 4-bit) 
+		• A rune is an alias for int32 (even though they can look
+		like chars), and since bytes function like int8, ASCII runes are
+		essentially the same as bytes (only more capacious). 
+		• As a result of these facts, these types are easily intertranslatable!
 
-	   [Misc] • Python 'enumerate' is default iteration for slices, i.e. you write "for idx,thing := range {{slice}} { do stuff }"
+		[Misc] • Python 'enumerate' is default iteration for slices, i.e.
+				 	you write "for idx,thing := range {{slice}} { do stuff }"
 	*/
 //
 
@@ -117,10 +123,6 @@ func fixedXOR(firstInput string, secondInput string) string {
 //helper for 3,4.. creates map from ASCII bytes to their frequency (as a proportion)
 //takes as input not a byte slice but a string, either hex or standard string
 func getFrequencies(input []byte) map[byte]float64 { 
-	// bytes := decodeHex(input)
-	// if bytes == nil { 
-	// 	bytes = []byte(input)
-	// }
 	frequenciesMap := make(map[byte]float64)
 	var totalBytes int = len(input)
 	for _, asciiByte := range input { 
@@ -145,8 +147,9 @@ func decipherString(input []byte, key int) []byte {
 
 //helper for 3,4
 func sortByFrequencies(input map[byte]float64) [][]float64 { 
-	//hackkeys stores slices like so: [FREQUENCY, ASCIINUM]
-	//ASCIINUM is byte/int not float64 so storing it as float64 here is laziness - just saves me defining struct.. convert back later
+	//hackkeys stores slices like so: [FREQUENCY, ASCIINUM] ASCIINUM is byte/int
+	//not float64 so storing it as float64 here is laziness - just saves me
+	//defining struct.. convert back later
 	hackkeys := make([][]float64, len(input))
 	for i := range hackkeys {
     	hackkeys[i] = make([]float64, 2)
@@ -160,8 +163,11 @@ func sortByFrequencies(input map[byte]float64) [][]float64 {
 }
 
 /*
-  measure distance of decoded text in terms of character frequencies from average Portrait of Artist text of same length by very simple method of summing the squared differences of the percentages of each character (i.e. for char 'e', it might be (10-15)^2). 
-  Since we are measuring distance from a representative probability distribution, the smaller the score the better.
+  measure distance of decoded text in terms of character frequencies from
+  average Portrait of Artist text of same length by very simple method of
+  summing the squared differences of the percentages of each character (i.e. for
+  char 'e', it might be (10-15)^2). Since we are measuring distance from a
+  representative probability distribution, the smaller the score the better.
 */ 
 func scoreDecipheredText(decodedFrequencies map[byte]float64, languageData map[byte]float64) float64 { 
 	var score float64
@@ -176,7 +182,8 @@ func scoreDecipheredText(decodedFrequencies map[byte]float64, languageData map[b
 	for key, val := range decodedFrequencies { 
 		_, exists := languageData[key]
 		/*
-		  account for strange chars that appear in texts deciphered with wrong cipher. If a weird char has high frequency in 'deciphered' string, 
+		  account for strange chars that appear in texts deciphered with wrong
+		  cipher. If a weird char has high frequency in 'deciphered' string, 
 		  then obviously that should push up the score! 
 		*/
 		if !exists {
@@ -189,9 +196,18 @@ func scoreDecipheredText(decodedFrequencies map[byte]float64, languageData map[b
 
 //challenge3 main
 func decodeXORCipher(input []byte) decipheredData {
-	//Source: edited version of Portrait of Artist as a Young Man.. not a perfect source but lazy and sentimental.. see io.py for ugly source code
-	//turns out you can literally call runes 'bytes' and the compiler doesn't complain = fun lifehack!
-	portraitOfArtistData := map[byte]float64{'P': 0.02, 'r': 4.49, 'o': 5.82, 'd': 3.87, 'u': 2.05, 'c': 1.75, 'e': 10.09, ' ': 17.23, 'b': 1.11, 'y': 1.41, 'C': 0.08, 'l': 3.55, 'h': 5.48, 'a': 6.29, 't': 6.85, '.': 0.94, 'H': 0.23, 'T': 0.25, 'M': 0.07, 'L': 0.04, 'v': 0.63, 's': 5.15, 'i': 5.23, 'n': 5.55, 'A': 0.15, 'F': 0.05, 'w': 1.8, 'f': 2.09, 'Y': 0.02, 'g': 1.66, 'J': 0.02, 'm': 1.82, 'p': 1.27, 'I': 0.16, 'V': 0.01, '"': 0.06, 'E': 0.03, 'O': 0.04, ',': 0.79, '1': 0.0, '8': 0.0, 'k': 0.66, ':': 0.13, 'B': 0.08, 'W': 0.07, 'q': 0.07, 'S': 0.13, '\'': 0.13, 'U': 0.01, 'D': 0.06, 'R': 0.02, 'K': 0.01, 'N': 0.03, '-': 0.05, 'x': 0.06, '!': 0.05, 'z': 0.03, 'j': 0.06, ';': 0.05, '?': 0.08, 'G': 0.07, 'Q': 0.0, '(': 0.0, ')': 0.0, '2': 0.0, '9': 0.0, 'Z': 0.0, 'X': 0.0, '3': 0.0, '0': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
+	//Source: edited version of Portrait of Artist as a Young Man.. not a
+	//perfect source but lazy and sentimental.. see io.py for ugly source code
+	//turns out you can literally call runes 'bytes' and the compiler doesn't
+	//complain = fun lifehack!
+	portraitOfArtistData := map[byte]float64{'P': 0.02, 'r': 4.49, 'o': 5.82, 'd': 3.87, 'u': 2.05, 'c': 1.75, 
+	'e': 10.09, ' ': 17.23, 'b': 1.11, 'y': 1.41, 'C': 0.08, 'l': 3.55, 'h': 5.48, 'a': 6.29, 't': 6.85, '.': 0.94,
+	'H': 0.23, 'T': 0.25, 'M': 0.07, 'L': 0.04, 'v': 0.63, 's': 5.15, 'i': 5.23, 'n': 5.55, 'A': 0.15, 'F': 0.05, 
+	'w': 1.8, 'f': 2.09, 'Y': 0.02, 'g': 1.66, 'J': 0.02, 'm': 1.82, 'p': 1.27, 'I': 0.16, 'V': 0.01, '"': 0.06, 
+	'E': 0.03, 'O': 0.04, ',': 0.79, '1': 0.0, '8': 0.0, 'k': 0.66, ':': 0.13, 'B': 0.08, 'W': 0.07, 'q': 0.07, 
+	'S': 0.13, '\'': 0.13, 'U': 0.01, 'D': 0.06, 'R': 0.02, 'K': 0.01, 'N': 0.03, '-': 0.05, 'x': 0.06, '!': 0.05, 
+	'z': 0.03, 'j': 0.06, ';': 0.05, '?': 0.08, 'G': 0.07, 'Q': 0.0, '(': 0.0, ')': 0.0, '2': 0.0, '9': 0.0, 'Z': 0.0, 
+	'X': 0.0, '3': 0.0, '0': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
 	
 	var inputFrequencies map[byte]float64 = getFrequencies(input)
 	// fmt.Println(inputFrequencies)
@@ -323,14 +339,20 @@ func hammingDistance(bytes1, bytes2 []byte) uint32 {
 	return distance
 }
 /*
-  Extra note: it took me a few minutes to grok Brian Kernighan's algorithm for set-bit counting (GeeksforGeeks explanation is imperfect) so I'll explain here:
-	(i) Observe: decrementing in fixed-length binary preserves all 1s and 0s moving from l-r until the rightmost 1; 
-		that 1 is zeroed (& if more 0s to the right, the first is set to 1) [e.g. 01 - 01 = 00 or 10 - 01 = 01]
-	(ii) So: the bitwise conjunction n&(n-1) will have n-1 # of 1s, because it just zeroes the rightmost 1 from n [e.g. 110&101 = 100]
-	(iii) So if we assign a variable x to be n and repeatedly assign x := n&(n-1), it will reach 0 with # assignments = # 1s in original string!
-	
-	This is insanely elegant with optimal time-complexity = O(log m) [with m the dec representation of the binary # n]
-	(Equivalently, where m is the length of the binary string, O(m).)
+  Extra note: it took me a few minutes to grok Brian Kernighan's algorithm for
+    set-bit counting (GeeksforGeeks explanation is imperfect) so I'll explain
+	here: 
+		(i) Observe: decrementing in fixed-length binary preserves all 1s and
+    	0s moving from l-r until the rightmost 1; that 1 is zeroed (& if more 0s to
+		the right, the first is set to 1) [e.g. 01 - 01 = 00 or 10 - 01 = 01] 
+		(ii) So: the bitwise conjunction n&(n-1) will have n-1 # of 1s, because it just
+		zeroes the rightmost 1 from n [e.g. 110&101 = 100] 
+		(iii) So if we assign a variable x to be n and repeatedly assign x := n&(n-1), 
+		it will reach 0 with # assignments = # 1s in original string!
+
+    This is insanely elegant with optimal time-complexity = O(log m) [with m the
+    dec representation of the binary # n] (Equivalently, where m is the length
+    of the binary string, O(m).)
 */
 
 
@@ -338,13 +360,19 @@ func hammingDistance(bytes1, bytes2 []byte) uint32 {
 //EXPLANATION: 
 	/*
 	  Conceptual: 
-	  	The more often the same bytes appear in the same position in equally split blocks of size x, the more likely it is that x is the size of the key.
-		Why? Because English plaintext has lots of repeated characters - much more repetition than a random 0-255 string.
-		Hence we need to find the size x that correlates with the most sameness between blocks
-	  Implementation:
-		I decided to do it more rigorously than Cryptopals suggested because I initially did it unrigorously and this caused me to believe that something had gone badly wrong - but it hadn't.
-		I create 10 blocks of size x and get the average of all possible pairwise Hamming Distance calculations (45 in total).
-		I average these and normalise as per the instructions. 
+	  	The more often the same bytes appear in the same position in
+	    equally split blocks of size x, the more likely it is that x is the size
+	    of the key. Why? Because English plaintext has lots of repeated
+	    characters - much more repetition than a random 0-255 string. Hence we
+	    need to find the size x that correlates with the most sameness between
+		blocks 
+	  Implementation: 
+	  	I decided to do it more rigorously than
+	    Cryptopals suggested because I initially did it unrigorously and this
+	    caused me to believe that something had gone badly wrong - but it
+	    hadn't. I create 10 blocks of size x and get the average of all possible
+	    pairwise Hamming Distance calculations (45 in total). I average these
+	    and normalise as per the instructions. 
 	*/
 //
 func getHammingAve(fileBytes []byte, possKeySize int) float64 { 
