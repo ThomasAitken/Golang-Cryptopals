@@ -4,15 +4,13 @@ package main
 	/* • Strings are underlyingly byte slices, by default represented in Base 10 elements:
 			→ If the character is in ASCII 0-255 [1-byte ASCII], then stringBytes[i] is its ASCII # in decimal 
 			→ In the case of Hex strings, each byte represents precisely two characters (because Hex is 4-bit)
-	   • A rune is an alias for int32 (even though they can look like chars), and since bytes function like int8, ASCII runes are essentially the same as bytes
-	   	 (only more capacious). 
+	   • A rune is an alias for int32 (even though they can look like chars), and since bytes function like int8, ASCII runes are essentially the same as bytes (only more capacious). 
 	   • As a result of these facts, these types are easily intertranslatable!
 
 	   [Misc] • Python 'enumerate' is default iteration for slices, i.e. you write "for idx,thing := range {{slice}} { do stuff }"
 	*/
 //
 
-//I might write tests at some point but I'm sloppy and, frankly, it's unimportant (not in general, just here) - plus at least they pass the minimal test suite on the website.
 //Note that it is fine and good that challenges 1-5 assume that any hex strings are of even length because they always are
 
 import (
@@ -136,11 +134,6 @@ func getFrequencies(input []byte) map[byte]float64 {
 	return frequenciesMap
 }
 
-//helper
-// func averagenessScore(input string, languageFreqs map[rune]float64) float64 { 
-
-// }
-
 //helper for 3,4
 func decipherString(input []byte, key int) []byte { 
 	xorBytes := make([]byte, len(input))
@@ -167,8 +160,7 @@ func sortByFrequencies(input map[byte]float64) [][]float64 {
 }
 
 /*
-  measure distance of decoded text in terms of character frequencies from average Portrait of Artist text of same length by very simple method of 
-  summing the squared differences of the percentages of each character (i.e. for char 'e', it might be (10-15)^2). 
+  measure distance of decoded text in terms of character frequencies from average Portrait of Artist text of same length by very simple method of summing the squared differences of the percentages of each character (i.e. for char 'e', it might be (10-15)^2). 
   Since we are measuring distance from a representative probability distribution, the smaller the score the better.
 */ 
 func scoreDecipheredText(decodedFrequencies map[byte]float64, languageData map[byte]float64) float64 { 
@@ -346,13 +338,11 @@ func hammingDistance(bytes1, bytes2 []byte) uint32 {
 //EXPLANATION: 
 	/*
 	  Conceptual: 
-	  	The more often the same bytes appear in the same position in equally split blocks of size x, 
-		the more likely it is that x is the size of the key.
+	  	The more often the same bytes appear in the same position in equally split blocks of size x, the more likely it is that x is the size of the key.
 		Why? Because English plaintext has lots of repeated characters - much more repetition than a random 0-255 string.
 		Hence we need to find the size x that correlates with the most sameness between blocks
 	  Implementation:
-		I decided to do it more rigorously than Cryptopals suggested because I initially did it unrigorously and this caused me 
-		to believe that something had gone badly wrong - but it hadn't.
+		I decided to do it more rigorously than Cryptopals suggested because I initially did it unrigorously and this caused me to believe that something had gone badly wrong - but it hadn't.
 		I create 10 blocks of size x and get the average of all possible pairwise Hamming Distance calculations (45 in total).
 		I average these and normalise as per the instructions. 
 	*/
