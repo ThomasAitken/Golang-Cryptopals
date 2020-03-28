@@ -61,59 +61,27 @@ func main() {
 		fmt.Println(string(solution.Candidate))
 		fmt.Println(solution.Score)
 	} else if challengeNumber == "5" {
-		f, err := os.Open("iceicebaby.txt")
-		if err != nil {
-			panic(err)
-		}
-		var output string
-		reader := bufio.NewReader(f)
-		var input string
-		var line string
-		for {
-			line, err = reader.ReadString('\n')
-			input += line
-			// line = strings.TrimSuffix(line, "\n")
-			if err != nil {
-				break
-			}
-			fmt.Println(input)
-		}
-		output = repeatingKeyXOR(input)
+		var input string = readSmallFile("iceicebaby.txt")
+		var output string = repeatingKeyXOR([]byte(input), "ICE", "hex")
 		fmt.Println(output)
 	} else if challengeNumber == "6" { 
-		// var output int32 = hammingDistance([]byte(input), []byte(secondInput))
-		// fmt.Println(output)
-		f, err := os.Open("challenge6.txt")
+		var input string = readSmallFile("challenge6.txt")
+		fileBytes, err := base64.StdEncoding.DecodeString(input)
 		if err != nil {
 			panic(err)
 		}
-		reader := bufio.NewReader(f)
-		var input string
-		var line string
-		for {
-			line, err = reader.ReadString('\n')
-			// line = strings.TrimSuffix(line, "\n")
-			input += line
-			if err != nil {
-				break
-			}
-			// fmt.Println(line)
-		}
-		fileBytes, err := base64.StdEncoding.DecodeString(input)
-		// fmt.Println(len(fileBytes))
 		var keySize int = probKeySize(fileBytes)
 		fmt.Println(keySize)
 		var transposedBytes [][]byte = transposeBytes(fileBytes, keySize) 
 		// fmt.Println(transposedBytes)
 		var solutionKey string
-		var jumbledText string
 		for _, bytes := range transposedBytes {
 			solution := decodeXORCipher(bytes)
-			jumbledText += string(solution.Candidate)
 			solutionKey += string(rune((solution.Key)))
 		}
 		fmt.Println(solutionKey)
-		fmt.Println(jumbledText)
+		var output string = repeatingKeyXOR(fileBytes, solutionKey, "plain")
+		fmt.Println(output)
 	}
 	return
 }
@@ -289,24 +257,43 @@ func computeMeaningfulString() decipheredData {
 	return decipheredData{Candidate: bestCandidate, Score: bestScore, Key: bestKey} 
 }
 
-//challenge5 main
-func repeatingKeyXOR(input string) string { 
-	inputBytes := []byte(input)
-	outputBytes := make([]byte, len(inputBytes))
-	var tern int8
-	for i := 0; i < len(inputBytes); i++ {
-		if tern == 0 {
-			outputBytes[i] = inputBytes[i] ^ 'I'
-			tern ++	
-		} else if tern == 1 {
-			outputBytes[i] = inputBytes[i] ^ 'C'
-			tern ++
+//returns long string
+func readSmallFile(filename string) string { 
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	reader := bufio.NewReader(f)
+	var input string
+	var line string
+	for {
+		line, err = reader.ReadString('\n')
+		input += line
+		// line = strings.TrimSuffix(line, "\n")
+		if err != nil {
+			break
+		}
+		// fmt.Println(input)
+	}
+	return input
+}
+
+//challenge5 main and used in challenge6
+func repeatingKeyXOR(input []byte, key string, outputMode string) string { 
+	output := make([]byte, len(input))
+	var keyIdx int
+	for i := 0; i < len(input); i++ {
+		output[i] = input[i] ^ key[keyIdx]
+		if keyIdx < len(key)-1 { 
+			keyIdx ++
 		} else { 
-			outputBytes[i] = inputBytes[i] ^ 'E'
-			tern = 0
+			keyIdx = 0
 		}
 	}
-	return hex.EncodeToString(outputBytes)
+	if outputMode == "hex" {
+		return hex.EncodeToString(output)
+	} 
+	return string(output)
 }
 
 //challenge6 helper
