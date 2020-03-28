@@ -31,6 +31,8 @@ import (
 	// "io"
 	// "io/ioutil"
 	"math"
+	"crypto/aes"
+	// "crypto/cipher"
 )
 
 type decipheredData struct {
@@ -86,6 +88,19 @@ func main() {
 		fmt.Println(solutionKey)
 		var output string = repeatingKeyXOR(fileBytes, solutionKey, "plain")
 		fmt.Println(output)
+	} else if challengeNumber == "7" { 
+		key := []byte("YELLOW SUBMARINE")
+		var input string = readSmallFile("challenge7.txt")
+		fileBytes, err := base64.StdEncoding.DecodeString(input)
+		if err != nil {
+			panic(err)
+		}
+		var output []byte = decryptAes128Ecb(fileBytes, key)
+		fmt.Println(string(output))
+	} else if challengeNumber == "8" { 
+		//this challenge is slightly dumb - you have to assume that the example is super contrived to expect one answer
+		maxRepetitions, cipherLine, idx := identifyAesEcb("challenge8.txt")
+		fmt.Printf("Line %d \"%s\" probably enciphered, repetitions: %d\n", idx, cipherLine, maxRepetitions)
 	}
 	return
 }
@@ -424,4 +439,67 @@ func transposeBytes(fileBytes []byte, keySize int) [][]byte {
 		} 
 	}
 	return transposedBytes
+}
+
+//challenge7 main
+func decryptAes128Ecb(ciphertext, key []byte) []byte {
+    cipher, _ := aes.NewCipher([]byte(key))
+    plaintext := make([]byte, len(ciphertext))
+    size := 16
+
+    for bs, be := 0, size; bs < len(ciphertext); bs, be = bs+size, be+size {
+        cipher.Decrypt(plaintext[bs:be], ciphertext[bs:be])
+    }
+
+    return plaintext
+}
+
+//challenge 8 helper
+func contains(s [][]byte, b []byte) bool {
+    for _, entry := range s {
+        if string(b) == string(entry) {
+            return true
+        }
+    }
+    return false
+}
+
+//challenge 8 main
+func identifyAesEcb(filename string) (int8, string, int) { 
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	reader := bufio.NewReader(f)
+	var suspectIdx int
+	var suspectLine string
+	var i int
+	var maxRepetitions int8 = -128
+	for {
+		var line string
+		line, err = reader.ReadString('\n')
+		line = strings.TrimSuffix(line, "\n")
+		if err != nil {
+			break
+		}
+		// fmt.Println(line)
+		cipherText := decodeHex(line)
+		var repeatCount int8 
+		var lineData [][] byte
+		for bs, be := 0, 16; be < len(cipherText); bs, be = bs+16, be+16 {
+			block := cipherText[bs:be]
+			if contains(lineData, block) {
+				repeatCount++
+			} else { 
+				lineData = append(lineData, block)
+			}
+		}
+		if repeatCount > maxRepetitions { 
+			maxRepetitions = repeatCount
+			suspectLine = line
+			suspectIdx = i
+		} 
+		i ++
+	}
+	return maxRepetitions, suspectLine, suspectIdx
 }
