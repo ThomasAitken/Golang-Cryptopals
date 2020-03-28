@@ -22,87 +22,19 @@ package main
 import (
 	"encoding/hex"
 	"encoding/base64"
-	"fmt"
 	"os"
 	"sort"
 	"bufio"
 	"strings"
 	"bytes"
-	// "io"
-	// "io/ioutil"
 	"math"
 	"crypto/aes"
-	// "crypto/cipher"
 )
 
 type decipheredData struct {
 	Candidate []byte
 	Score float64
 	Key int
-}
-
-func main() {
-	var challengeNumber string = os.Args[1]
-	var input string
-	var secondInput string
-	if len(os.Args) > 2 { 
-		input = os.Args[2]
-	}
-	if len(os.Args) > 3 {
-		secondInput = os.Args[3]
-	}
-	if challengeNumber == "1" { 
-		var output string = hexTo64(input)
-		fmt.Println(output)
-	} else if challengeNumber == "2" {
-		var output string = fixedXOR(input, secondInput)
-		fmt.Println(output)
-	} else if challengeNumber == "3" {
-		inputBytes := decodeHex(input)
-		solution := decodeXORCipher(inputBytes)
-		fmt.Println(string(solution.Candidate))
-		fmt.Println(solution.Score)
-	} else if challengeNumber == "4" {
-		solution := computeMeaningfulString()
-		fmt.Println(string(solution.Candidate))
-		fmt.Println(solution.Score)
-	} else if challengeNumber == "5" {
-		var input string = readSmallFile("iceicebaby.txt")
-		var output string = repeatingKeyXOR([]byte(input), "ICE", "hex")
-		fmt.Println(output)
-	} else if challengeNumber == "6" { 
-		var input string = readSmallFile("challenge6.txt")
-		fileBytes, err := base64.StdEncoding.DecodeString(input)
-		if err != nil {
-			panic(err)
-		}
-		var keySize int = probKeySize(fileBytes)
-		fmt.Println(keySize)
-		var transposedBytes [][]byte = transposeBytes(fileBytes, keySize) 
-		// fmt.Println(transposedBytes)
-		var solutionKey string
-		for _, bytes := range transposedBytes {
-			solution := decodeXORCipher(bytes)
-			solutionKey += string(rune((solution.Key)))
-		}
-		fmt.Println(solutionKey)
-		var output string = repeatingKeyXOR(fileBytes, solutionKey, "plain")
-		fmt.Println(output)
-	} else if challengeNumber == "7" { 
-		key := []byte("YELLOW SUBMARINE")
-		var input string = readSmallFile("challenge7.txt")
-		fileBytes, err := base64.StdEncoding.DecodeString(input)
-		if err != nil {
-			panic(err)
-		}
-		var output []byte = decryptAes128Ecb(fileBytes, key)
-		fmt.Println(string(output))
-	} else if challengeNumber == "8" { 
-		//this challenge is slightly dumb - you have to assume that the example is super contrived to expect one answer
-		maxRepetitions, cipherLine, idx := identifyAesEcb("challenge8.txt")
-		fmt.Printf("Line %d \"%s\" probably enciphered, repetitions: %d\n", idx, cipherLine, maxRepetitions)
-	}
-	return
 }
 
 //helper
@@ -212,9 +144,11 @@ func scoreDecipheredText(decodedFrequencies map[byte]float64, languageData map[b
 //challenge3 main
 func decodeXORCipher(input []byte) decipheredData {
 	//Source: edited version of Portrait of Artist as a Young Man.. not a
-	//perfect source but lazy and sentimental.. see io.py for ugly source code
-	//turns out you can literally call runes 'bytes' and the compiler doesn't
-	//complain = fun lifehack!
+	//perfect source but lazy and sentimental.. see io.py in set1_data for ugly source code
+	/*
+	  turns out you can literally call runes 'bytes' and the compiler doesn't
+	  complain = fun lifehack!
+	*/
 	portraitOfArtistData := map[byte]float64{'P': 0.02, 'r': 4.49, 'o': 5.82, 'd': 3.87, 'u': 2.05, 'c': 1.75, 
 	'e': 10.09, ' ': 17.23, 'b': 1.11, 'y': 1.41, 'C': 0.08, 'l': 3.55, 'h': 5.48, 'a': 6.29, 't': 6.85, '.': 0.94,
 	'H': 0.23, 'T': 0.25, 'M': 0.07, 'L': 0.04, 'v': 0.63, 's': 5.15, 'i': 5.23, 'n': 5.55, 'A': 0.15, 'F': 0.05, 
