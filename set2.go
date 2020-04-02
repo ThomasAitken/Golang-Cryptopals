@@ -39,7 +39,7 @@ func padPlaintext(plaintext []byte, desiredSize int) []byte {
   it, it's a misleading statement. And, most confusingly at all, no form of
   Ciphertext stealing is relevant to this challenge.
 
-  There have been several confusing sentences like this so far in this set of
+  There have been several confusing sentences like this so far in these
   challenges. I wish they were less cryptic with their instructions and
   exposition. It has caused me to waste some time. And my time is precious
   goddamnit!
@@ -75,7 +75,7 @@ func decryptAes128CBC(ciphertext, key, iv []byte) []byte {
     plaintext := make([]byte, len(ciphertext))
     size := 16
     prevBlock := iv
-    //doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Encrypt')
+    //doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Decrypt')
     for bs, be := 0, size; bs < len(ciphertext); bs, be = bs+size, be+size {
         cipher.Decrypt(plaintext[bs:be], ciphertext[bs:be])
         //'plaintext' is not plain text until this operation.. symmetrically with use of 'ciphertext' above

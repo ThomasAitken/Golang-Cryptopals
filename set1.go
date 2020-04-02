@@ -65,7 +65,6 @@ func fixedXOR(firstBytes []byte, secondBytes []byte) []byte {
 } 
 
 //helper for 3,4.. creates map from ASCII bytes to their frequency (as a proportion)
-//takes as input not a byte slice but a string, either hex or standard string
 func getFrequencies(input []byte) map[byte]float64 { 
 	frequenciesMap := make(map[byte]float64)
 	var totalBytes int = len(input)
@@ -266,13 +265,13 @@ func hammingDistance(bytes1, bytes2 []byte) uint32 {
 
 //EXPLANATION OF BELOW:
 	/*
-		Recall: XOR(bit1, bit2) returns 1 for pairs {(1,0),(0,1)}, 0 otherwise
-		Idea: count bit diffs b/w two strings by XORing each bit pair.
-		Problem: in this language, we can only directly apply XOR to bytes! 
-		Solution: 
-			Some algorithm for counting 1s in XOR-byte.
-			Below uses Brian Kernighan's ultra-cool trick for counting 1s in bit-string: 
-			https://www.geeksforgeeks.org/count-set-bits-in-an-integer/ 
+	  Recall: XOR(bit1, bit2) returns 1 for pairs {(1,0),(0,1)}, 0 otherwise
+	  Idea: count bit diffs b/w two strings by XORing each bit pair.
+	  Problem: in this language, we can only directly apply XOR to bytes! 
+	  Solution: 
+		Some algorithm for counting 1s in XOR-byte.
+		Below uses Brian Kernighan's ultra-cool trick for counting 1s in bit-string: 
+		https://www.geeksforgeeks.org/count-set-bits-in-an-integer/ 
 	*/
 //
 	var distance uint32
