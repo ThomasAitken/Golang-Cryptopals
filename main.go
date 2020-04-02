@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"encoding/base64"
+	"encoding/hex"
 )
 
 /* 
@@ -17,9 +18,9 @@ import (
 func main() {
 	setNum := os.Args[1]
 	challengeNum := os.Args[2]
+	var input string
+	var secondInput string
 	if setNum == "1" {
-		var input string
-		var secondInput string
 		if len(os.Args) > 3 { 
 			input = os.Args[3]
 		}
@@ -27,6 +28,11 @@ func main() {
 			secondInput = os.Args[4]
 		}
 		executeSetOne(challengeNum, input, secondInput)
+	} else if setNum == "2" { 
+		if len(os.Args) > 3 { 
+			input = os.Args[3]
+		}
+		executeSetTwo(challengeNum, input)
 	}
 	return
 }
@@ -36,8 +42,11 @@ func executeSetOne(challengeNum, input string, secondInput string) {
 		var output string = hexTo64(input)
 		fmt.Println(output)
 	} else if challengeNum == "2" {
-		var output string = fixedXOR(input, secondInput)
-		fmt.Println(output)
+		firstBytes := decodeHex(input)
+		secondBytes := decodeHex(secondInput)
+		xorBytes := fixedXOR(firstBytes, secondBytes)
+		var hexOut string = hex.EncodeToString(xorBytes)
+		fmt.Println(hexOut)
 	} else if challengeNum == "3" {
 		inputBytes := decodeHex(input)
 		solution := decodeXORCipher(inputBytes)
@@ -82,6 +91,27 @@ func executeSetOne(challengeNum, input string, secondInput string) {
 		//this challenge is slightly dumb - you have to assume that the example is super contrived to expect one answer
 		maxRepetitions, cipherLine, idx := identifyAesEcb("set1_data/challenge8.txt")
 		fmt.Printf("Line %d \"%s\" probably enciphered, repetitions: %d\n", idx, cipherLine, maxRepetitions)
+	}
+	return
+}
+
+func executeSetTwo(challengeNum, input string) { 
+	if challengeNum == "1" {
+		bytesInput := []byte(input) 
+		var output []byte = padPlaintext(bytesInput, 20)
+		fmt.Println(output)
+	}
+	if challengeNum == "2" { 
+		var input string = readSmallFile("set2_data/challenge10.txt")
+		fileBytes, err := base64.StdEncoding.DecodeString(input)
+		if err != nil {
+			panic(err)
+		}
+		key := []byte("YELLOW SUBMARINE")
+		iv := make([]byte, 16)
+		var output []byte = decryptAes128CBC(fileBytes, key, iv)
+		fmt.Println(string(output))
+
 	}
 	return
 }

@@ -56,15 +56,12 @@ func hexTo64(input string) string {
 }
 
 //challenge2 main
-func fixedXOR(firstInput string, secondInput string) string { 
-	firstBytes := decodeHex(firstInput)
-	secondBytes := decodeHex(secondInput)
+func fixedXOR(firstBytes []byte, secondBytes []byte) []byte { 
 	xorBytes := make([]byte, len(firstBytes))
 	for i := 0; i < len(firstBytes); i++ {
 		xorBytes[i] = firstBytes[i] ^ secondBytes[i]
 	}
-	var hexOut string = hex.EncodeToString(xorBytes)
-	return hexOut
+	return xorBytes
 } 
 
 //helper for 3,4.. creates map from ASCII bytes to their frequency (as a proportion)
