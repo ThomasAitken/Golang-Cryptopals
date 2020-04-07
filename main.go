@@ -100,8 +100,7 @@ func executeSetTwo(challengeNum, input string) {
 		bytesInput := []byte(input) 
 		var output []byte = padPlaintext(bytesInput, 20)
 		fmt.Println(output)
-	}
-	if challengeNum == "2" { 
+	} else if challengeNum == "2" { 
 		var input string = readSmallFile("set2_data/challenge10.txt")
 		fileBytes, err := base64.StdEncoding.DecodeString(input)
 		if err != nil {
@@ -109,9 +108,19 @@ func executeSetTwo(challengeNum, input string) {
 		}
 		key := []byte("YELLOW SUBMARINE")
 		iv := make([]byte, 16)
-		var output []byte = decryptAes128CBC(fileBytes, key, iv)
+		var output []byte = decryptAes128CBC(fileBytes, key, iv, false)
 		fmt.Println(string(output))
-
+	} else if challengeNum == "3" { 
+		output, option := randAESEncrypt([]byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+		var mode string = identifyMode(output)
+		if mode == "ECB" && option == 0 { 
+			fmt.Println("True positive")
+		} else if mode == "ECB" && option == 1 { 
+			fmt.Println("False negative")
+		} else { 
+			fmt.Println("Not false negative")
+		}
+		// fmt.Println(string(output))
 	}
 	return
 }
