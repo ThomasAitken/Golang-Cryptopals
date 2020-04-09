@@ -1,6 +1,6 @@
 https://cryptopals.com/
 
-Working through these in Golang. Learning the language as I re-learn (or learn in a different way) cryptographic/number theory stuff I kind of did already in university.
+Working through these in Golang. Learning the language as I re-learn (or learn in a different way) cryptographic/number theory stuff I kind of did already in university (UPDATE 2 weeks later: actually, in university the cryptography I learnt definitely made more sense than most of these challenges).
 
 #### USAGE: 
 
