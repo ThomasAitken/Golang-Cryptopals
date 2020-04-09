@@ -13,6 +13,7 @@ import (
     "time"
     "crypto/aes"
     random "crypto/rand"
+    "strings"
 )
 
 //challenge1 main
@@ -67,7 +68,7 @@ func removePKCS7Pad(plaintext []byte) []byte {
     finIdx := len(plaintext)-1 
     finValue := int(plaintext[finIdx])
     //validate padding
-    for i := finIdx; i >= finIdx-finValue; i -- { 
+    for i := finIdx; i > finIdx-finValue; i -- { 
         if int(plaintext[i]) != finValue { 
             panic("Decryption failed!")
         } 
@@ -125,13 +126,13 @@ func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
   heinous. This is far worse than anything that has come before; I literally had
   no clue what was being asked of me before I looked at how other people had
   interpreted this problem online. I thought they were asking me to feed the
-  oracle just any old plaintext input and find a way to determine on the basis
-  of the ciphertext alone whether the text was enciphered using ECB or CBC. (And
-  not just determine with high confidence either; the language ("detect [...]
-  each time" suggested to me a fully deterministic solution.) But my thinking
-  was that unless there was some info I was missing, there is no way to
-  determine this with a high hit rate (let alone deterministically) unless the
-  plaintext inputs always contain strong regularities and are big. (The only
+  encrypytion function just any old plaintext input and find a way to determine
+  on the basis of the ciphertext alone whether the text was enciphered using ECB
+  or CBC. (And not just determine with high confidence either; the language
+  ("detect [...] each time" suggested to me a fully deterministic solution.) But
+  my thinking was that unless there was some info I was missing, there is no way
+  to determine this with a high hit rate (let alone deterministically) unless
+  the plaintext inputs always contain strong regularities and are big. (The only
   relevant strat we have been taught hitherto that could bear on this is looking
   for repeated 16-byte blocks in the ciphertext - a telltale sign of ECB but not
   likely to organically make itself known in a short text). Even assuming this
@@ -191,10 +192,8 @@ func addRandBytes(plaintext []byte, start, end int) []byte {
 
 func randAESEncrypt(plaintext []byte) ([]byte, int) { 
     key := randBytes(16)
-    fmt.Println("key", key)
     // //I know it's stupid but that's what they wanted me to do..
     iv := randBytes(16)
-    fmt.Println("iv", iv)
     messyPlaintext := addRandBytes(plaintext, 5, 11)
     rand.Seed(time.Now().UnixNano())
     option := rand.Intn(2)
@@ -202,10 +201,8 @@ func randAESEncrypt(plaintext []byte) ([]byte, int) {
     fmt.Println(option)
     if option == 0 { 
         ciphertext = encryptAes128ECB(messyPlaintext, key)
-        fmt.Println(ciphertext)
     } else { 
         ciphertext = encryptAes128CBC(messyPlaintext, key, iv)
-        fmt.Println(ciphertext)
     }
     return ciphertext, option
 }
@@ -225,4 +222,118 @@ func identifyMode(ciphertext []byte) string {
         return "ECB"
     }
     return "Undetermined"
+}
+
+func getBlockSize(key []byte) int { 
+    var trueSize int = -1
+    for i := 1; i <= 32; i ++ { 
+        input := make([]byte, i*2)
+        encrypted := encryptAes128ECB(input, key)
+        var j int
+        var firstBlock []byte
+        for bs, be := 0, i; be < len(encrypted); bs, be = bs+i, be+i { 
+            block := encrypted[bs:be]
+            if j == 0 { 
+                firstBlock = block 
+            } else { 
+                if string(block) == string(firstBlock) { 
+                    trueSize = i
+                }
+            }
+            j ++
+        }
+        if trueSize > -1 { 
+            return trueSize
+        } 
+    }
+    return 0
+}
+
+func makeReference(prefix, key []byte) map[string]byte { 
+    output := make(map[string]byte)
+    for i := 0; i < 128; i++ { 
+        ascii := byte(i)
+        plainblock := append(prefix, ascii)
+        cipherblock := encryptAes128ECB(plainblock, key)
+        output[string(cipherblock)] = ascii
+    }
+    return output
+}
+
+/*
+  Time for me to rant again. WTF is the point of this problem? They're claiming
+  that after this challenge we now know how to decrypt AES128ECB ciphertexts..
+  but in the real world you don't have access to the plaintext before it gets
+  encrypted lol. Bro why are we prepending characters when we could just read
+  the plaintext like wtf are these people smoking? I'm legitimately getting so
+  disillusioned with these 5f82df6094553dece94818be2c42aeca8dad5b45.. 
+
+  This challenge shows us how to decrypt some ECB-enciphered ciphertext if we
+  have (a) access to the plaintext, and (b) access to the key. I'm laughing.
+
+  Ok, presumably there must be some real-world application vaguely similar to
+  this scenario, because otherwise they wouldn't teach us it, right? But I can't
+  think of one. So far, Set 2 has been a pure cringe compilation.
+
+  As for my implementation below, idgaf if this is what they wanted or not. This
+  is the simplest way of doing it 'one byte at a time'. I didn't want to waste
+  more time than I had to on this goofy problem.
+ */
+
+//challenge4 nonsense
+func oneByteDecryption(secretText []byte) []byte { 
+    key := randBytes(16)
+    size := getBlockSize(key)
+    // var mode string = identifyMode(ciphertext)
+    prefix := make([]byte, size-1)
+    var cipherblocks map[string]byte = makeReference(prefix, key)
+    deciphered := make([]byte, len(secretText))
+    for i := 0; i < len(secretText); i++ {
+        block := append(prefix, secretText[i])
+        cipherblock := encryptAes128ECB(block, key)
+        for key,val := range cipherblocks { 
+            if key == string(cipherblock) { 
+                deciphered[i] = val
+            }
+        }
+    }
+    return deciphered
+}
+
+//challenge 5 larks
+
+
+//barely used lol
+func queryToDict(query string) map[string]string { 
+    keyvals := strings.Split(query, "&") 
+    queryDict := make(map[string]string)
+    for _,kv := range keyvals {
+        splitKV := strings.Split(kv, "=")
+        queryDict[splitKV[0]] = splitKV[1]
+    }
+    return queryDict
+}
+
+func genProfile(email string) string { 
+    email = strings.ReplaceAll(email, "=", "")
+    email = strings.ReplaceAll(email, "&", "")
+    var profile string = "email=" + email + "&uid=10&role=user"
+    return profile
+}
+
+//another goofy challenge
+func makeMeAdmin() map[string]string { 
+     //the profile string generated from "email=wank@mail.com&uid=10&role=user"
+    //is 36 bytes meaning 'user' will be in its own encryption block
+    var stupidProfile string = genProfile("wank@mail.com")
+    key := randBytes(16)
+    encipheredProfile1 := encryptAes128ECB([]byte(stupidProfile), key)[:32]
+    adminString := string(addPKCS7Pad([]byte("admin")))
+    //admin will be at start of second block. Delicious! And plausible-ish email.
+    var evenStupiderProfile string = genProfile("wank@mail." + adminString)
+    encipheredProfile2 := encryptAes128ECB([]byte(evenStupiderProfile), key)
+    adminCipher := append(encipheredProfile1, encipheredProfile2[16:32]...)
+    adminProfile := string(decryptAes128ECB(adminCipher, key, true))
+    adminDict := queryToDict(adminProfile)
+    return adminDict
 }

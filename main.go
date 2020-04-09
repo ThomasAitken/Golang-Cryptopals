@@ -85,11 +85,11 @@ func executeSetOne(challengeNum, input string, secondInput string) {
 		if err != nil {
 			panic(err)
 		}
-		var output []byte = decryptAes128Ecb(fileBytes, key)
+		var output []byte = decryptAes128ECB(fileBytes, key, false)
 		fmt.Println(string(output))
 	} else if challengeNum == "8" { 
 		//this challenge is slightly dumb - you have to assume that the example is super contrived to expect one answer
-		maxRepetitions, cipherLine, idx := identifyAesEcb("set1_data/challenge8.txt")
+		maxRepetitions, cipherLine, idx := identifyAesECB("set1_data/challenge8.txt")
 		fmt.Printf("Line %d \"%s\" probably enciphered, repetitions: %d\n", idx, cipherLine, maxRepetitions)
 	}
 	return
@@ -120,7 +120,17 @@ func executeSetTwo(challengeNum, input string) {
 		} else { 
 			fmt.Println("Not false negative")
 		}
-		// fmt.Println(string(output))
+	} else if challengeNum == "4" { 
+		var plaintext64 string = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK"
+		plaintext, err := base64.StdEncoding.DecodeString(plaintext64)
+		if err != nil {
+			panic(err)
+		}
+		output := oneByteDecryption(plaintext)
+		fmt.Println(string(output))
+	} else if challengeNum == "5" { 
+		var adminProfile map[string]string = makeMeAdmin()
+		fmt.Println(adminProfile)
 	}
 	return
 }

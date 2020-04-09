@@ -372,7 +372,7 @@ func transposeBytes(fileBytes []byte, keySize int) [][]byte {
 }
 
 //challenge7 main
-func decryptAes128Ecb(ciphertext, key []byte) []byte {
+func decryptAes128ECB(ciphertext, key []byte, padding bool) []byte {
     cipher, _ := aes.NewCipher([]byte(key))
     plaintext := make([]byte, len(ciphertext))
     size := 16
@@ -380,7 +380,9 @@ func decryptAes128Ecb(ciphertext, key []byte) []byte {
     for bs, be := 0, size; bs < len(ciphertext); bs, be = bs+size, be+size {
         cipher.Decrypt(plaintext[bs:be], ciphertext[bs:be])
     }
-
+	if padding == true {
+        plaintext = removePKCS7Pad(plaintext)
+    }
     return plaintext
 }
 
@@ -395,7 +397,7 @@ func contains(s [][]byte, b []byte) bool {
 }
 
 //challenge 8 main
-func identifyAesEcb(filename string) (int8, string, int) { 
+func identifyAesECB(filename string) (int8, string, int) { 
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
