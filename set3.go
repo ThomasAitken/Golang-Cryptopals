@@ -82,8 +82,24 @@ func testFunctions() {
         (ii) When you've done this n times, you now have D(C_2)[16-n] = C_1'[16-n] ^ \x[n] 
 
     After 16 iterations, you have the entire block D(C_2), from which you can
-	calculate C_2 = D(C_2) ^ C_1
-	
+	calculate C_2 = D(C_2) ^ C_1...
+
+
+	Initially, I implemented this attack imperfectly, so that it was fucking up the last block 
+	around half of the time. This was because the padding increases the likelihood of circumstantial 
+	padding-validity dramatically. My code had asumed that if I insert, say, \x10 into C_1'[15], 
+	then when I send C_1', C_2 off the oracle and get a positive response, that means D(C_2)[15] 
+	= C_1'[15] ^ \x01. But it could be that D(C_2)[15] = C_1'[15] ^ \x04 if P_2 ends with 
+	\x04\x04\x04\x04! 
+
+	I got around this problem with this mad hack:
+		if hackedVal^prevblock[blockIdx] == 1 && bs+16 == len(ciphertext) {
+			continue
+		}
+	I use the word 'hack' deliberately, because this condition basically just has the effect of
+	assuming that the plaintext is never padded with a single \x01 at the end. 15/16 times this won't be 
+	the case; the alternative was worse... Sure, I could fully solve the problem, but I can't think of a
+	way of doing so that wouldn't mess up my elegant code.
 */
 
 func paddingOracleAttack() []byte { 
@@ -106,7 +122,7 @@ func paddingOracleAttack() []byte {
 				i.e. suppose XORtarget is \x02, then we're changing C_1'[14],[15] with values s.t. P_2'[14], 
 				[15] = \x02. Such values determined by XORing against previous char decryptions.
 			*/
-			for j := XORtarget-1; j >= 1; j -- {
+			for j := XORtarget-1; j >= 1; j -- {                                                                                                              
 				prevblockMut[16-j] = decryptedBlock[16-j] ^ byte(XORtarget)
 			}
 			for ascii := 0; ascii < 256; ascii ++ {
@@ -114,6 +130,10 @@ func paddingOracleAttack() []byte {
 				if checkLine(cipherblock, prevblockMut) == true { 
 					//hackedVal = D(C_2)[n]
 					hackedVal = byte(ascii) ^ byte(XORtarget)
+					//mad hackz... explainer below
+					if hackedVal^prevblock[blockIdx] == 1 && bs+16 == len(ciphertext) {
+						continue
+					}
 					break
 				}
 			}
@@ -123,6 +143,8 @@ func paddingOracleAttack() []byte {
 		prevblock = cipherblock
 		copy(prevblockMut, cipherblock)
 	}
+    fmt.Println(plaintext)
 	plaintext = removePKCS7Pad(plaintext)
 	return plaintext
 }	
+
