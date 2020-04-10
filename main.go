@@ -33,6 +33,11 @@ func main() {
 			input = os.Args[3]
 		}
 		executeSetTwo(challengeNum, input)
+	} else if setNum == "3" {
+		if len(os.Args) > 3 { 
+			input = os.Args[3]
+		}
+		executeSetThree(challengeNum, input)
 	}
 	return
 }
@@ -140,6 +145,14 @@ func executeSetTwo(challengeNum, input string) {
 		fmt.Println(removePKCS7Pad([]byte(badPlain)))
 	} else if challengeNum == "8" { 
 		output := cbcBitFlip()
+		fmt.Println(string(output))
+	}
+	return
+}
+
+func executeSetThree(challengeNum, input string) { 
+	if challengeNum == "1" { 
+		output := paddingOracleAttack()
 		fmt.Println(string(output))
 	}
 	return

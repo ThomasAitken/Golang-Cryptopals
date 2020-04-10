@@ -1,14 +1,7 @@
 package main
 
 import (
-	// "encoding/hex"
-	// "encoding/base64"
 	"fmt"
-	// "os"
-	// "sort"
-	// "bufio"
-	// "strings"
-	// "bytes"
     "math/rand"
     "time"
     "crypto/aes"
@@ -67,13 +60,20 @@ func addPKCS7Pad(plaintext []byte) []byte {
 func removePKCS7Pad(plaintext []byte) []byte {
     finIdx := len(plaintext)-1 
     finValue := int(plaintext[finIdx])
+    if finValue == 0 {
+        return nil
+    }
     //validate padding
     for i := finIdx; i > finIdx-finValue; i -- { 
         if int(plaintext[i]) != finValue { 
-            panic("Decryption failed!")
+            // fmt.Println("Decryption failed!")
+            return nil
         } 
     }
     plaintext = plaintext[:len(plaintext)-finValue]
+    if plaintext == nil {
+        plaintext = make([]byte, 16)
+    }
     return plaintext
 }
 
