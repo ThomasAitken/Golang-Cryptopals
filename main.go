@@ -131,6 +131,16 @@ func executeSetTwo(challengeNum, input string) {
 	} else if challengeNum == "5" { 
 		var adminProfile map[string]string = makeMeAdmin()
 		fmt.Println(adminProfile)
+	} else if challengeNum == "6" { 
+		fmt.Println("Reached my wit's end")
+	} else if challengeNum == "7" { 
+		paddedPlain := "ICE ICE BABY\x04\x04\x04\x04"
+		fmt.Println(removePKCS7Pad([]byte(paddedPlain)))
+		badPlain := "ICE ICE BABY\x05\x05\x05\x05"
+		fmt.Println(removePKCS7Pad([]byte(badPlain)))
+	} else if challengeNum == "8" { 
+		output := cbcBitFlip()
+		fmt.Println(string(output))
 	}
 	return
 }

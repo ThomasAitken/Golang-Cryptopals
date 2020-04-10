@@ -337,3 +337,56 @@ func makeMeAdmin() map[string]string {
     adminDict := queryToDict(adminProfile)
     return adminDict
 }
+
+//8 helper
+func quoteQueryMeta(query string) string {
+    query = strings.ReplaceAll(query, ";", "%3B")
+    query = strings.ReplaceAll(query, "=", "%3D")
+    return query
+}
+
+func unquoteQueryMeta(query string) string {
+    query = strings.ReplaceAll(query, "%3B", ";")
+    query = strings.ReplaceAll(query, "%3D", "=")
+    return query
+}
+
+//ok I've decided to skip challenge 6 because it's just an annoying variation of challenge 4
+
+
+//challenge 8 nonsense
+func weirdEncrypt(plaintext string, key, iv []byte) []byte { 
+    prefix := "comment1=cooking%20MCs;userdata="
+    suffix := ";comment2=%20like%20a%20pound%20of%20bacon"
+    plainBytes := []byte(quoteQueryMeta(plaintext))
+    plainBytes = append([]byte(prefix), plainBytes...)
+    plainBytes = append(plainBytes, []byte(suffix)...)
+    fmt.Println(string(plainBytes))
+    ciphertext := encryptAes128CBC(plainBytes, key, iv)
+    return ciphertext
+}
+
+
+func identifyAdmin(ciphertext, key, iv []byte) bool { 
+    plaintext := decryptAes128CBC(ciphertext, key, iv, true)
+    if strings.Contains(string(plaintext), ";admin=true;") == true { 
+        return true
+    }
+    return false
+}
+
+//Cryptopals ppl ask us this question: why does CBC mode have this property?
+//Answer: because in CBC decryption previous cipherblock XORed against
+//AES-decrypted almost-plaintext of next block.. Elementary, dear Watson
+
+func cbcBitFlip() []byte {
+    attackerInput := ":admin<true:blah"
+    key, iv := randBytes(16), randBytes(16)
+    ciphertext := weirdEncrypt(attackerInput, key, iv)
+    ciphertext[16] = byte(int(ciphertext[16])+1)
+    ciphertext[22] = byte(int(ciphertext[22])-1)
+    ciphertext[27] = byte(int(ciphertext[27])-1)
+    plaintext := decryptAes128CBC(ciphertext, key, iv, true)
+    return plaintext
+}
+
