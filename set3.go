@@ -6,6 +6,7 @@ import (
 	"strings"
 	"math/rand"
 	"time"
+    "crypto/aes"
 )
 
 var key []byte
@@ -102,10 +103,10 @@ func testFunctions() {
 				If you still get valid padding:
 					P_2 must be padded with \x01. So proceed as usual.
 				Else: 
-					P2 has extra padding & you haven't yet found C_1'[15]
+					P_2 has extra padding & you haven't yet found C_1'[15]
 					s.t. C_1'[15]^D(C_2)[15] = \x01. So keep looking for this.
 	
-					
+
 	So now this is a fully rigorous implementation. The chance of a fail is very low.
 */
 
@@ -161,3 +162,20 @@ func paddingOracleAttack() []byte {
 	return plaintext
 }	
 
+//challenge 2
+func cryptAes128CTR(inText, key, nonce []byte) []byte {
+	cipher, _ := aes.NewCipher([]byte(key))
+	counter := make([]byte, 8)
+	outText := make([]byte, len(inText))
+	for bs, be := 0, 16; bs < len(inText); bs, be = bs+16, be+16 {
+		nAndC := append(nonce, counter...)
+		keystream := make([]byte, 16)
+		cipher.Encrypt(keystream, nAndC)
+		if be > len(inText) {
+			be = len(inText)
+		}
+		copy(outText[bs:be], fixedXOR(inText[bs:be], keystream[:be-bs]))
+		counter[0] = counter[0]+1
+	}
+	return outText
+}

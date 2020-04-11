@@ -154,6 +154,17 @@ func executeSetThree(challengeNum, input string) {
 	if challengeNum == "1" { 
 		output := paddingOracleAttack()
 		fmt.Println(string(output))
+	} else if challengeNum == "2" {
+		nonce := make([]byte, 8)
+		key := []byte("YELLOW SUBMARINE")
+		inText, err := base64.StdEncoding.DecodeString(input)
+		if err != nil {
+			panic(err)
+		}
+		output := cryptAes128CTR(inText, key, nonce)
+		inText = output
+		output1 := cryptAes128CTR(inText, key, nonce)
+		fmt.Println(base64.StdEncoding.EncodeToString(output1))
 	}
 	return
 }
