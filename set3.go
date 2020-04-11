@@ -48,8 +48,7 @@ func testFunctions() {
 /* WIKI explanation of this attack is quite badly written/misleading so here's
   my attempt:
 
-  Necessary conditions: 
-      This attack assumes the quite strange - but apparently
+  Necessary conditions: This attack assumes the quite strange - but apparently
       occasionally realistic - scenario, where you have access to two things:
       (a) a ciphertext (ideally including the IV, which apparently
       sometimes/often forms the start of the ciphertext), and (b) a "padding
@@ -60,46 +59,54 @@ func testFunctions() {
       decrypt the second block, because padding can only be assessed on
       plaintext.
 
-  Attack Description/Explanation: 
-	  Suppose you randomly modify the last digit of ciphertext block C_1 to make 
-	  C_1' & then feed (C_1', C_2) to the oracle, which then tells you that the padding 
-	  is valid. This strongly suggests that the pseudo-plaintext P_2' on which the 
-	  oracle made the evaluation (i.e. C_1' ^ D(C_2)) happened to terminate in 
-	  \x01 (yes, it could be that you've created a text P_2' terminating with \x02\x02 
-	  but that requires that the penultimate character of the real P_2 happened to 
-	  be \x02 and that you didn't hit \x02\x01 first while feeding in modified blocks). 
+  Attack Description/Explanation: Suppose you randomly modify the last digit of
+      ciphertext block C_1 to make C_1' & then feed (C_1', C_2) to the oracle,
+      which then tells you that the padding is valid. This strongly suggests
+      that the pseudo-plaintext P_2' on which the oracle made the evaluation
+      (i.e. C_1' ^ D(C_2)) happened to terminate in \x01 (yes, it could be that
+      you've created a text P_2' terminating with \x02\x02 but that requires
+      that the penultimate character of the real P_2 happened to be \x02 and
+      that you didn't hit \x02\x01 first while feeding in modified blocks). 
 
     So this simple boolean verdict about padding has given you the following:
 		D(C_2) ^ C_1' terminates with \x01 
 		=> D(C_2)[15] = C_1'[15] ^ \x01
 
 	This can be generalised to find other characters in D(C_2) as follows: 
-		Let n be the # of characters from the end of the block of the character you
-        seek (i.e. if you wanted to find the first character of the block, n=16)
+		
+		For curr_index = 15; decrementing: 
+			(i) For i= 15 to i=curr_index+1: 
+					edit C_1'[i] s.t. P_2'[i] = XORtarget (\x02, \x03, etc) 
+					using previously decrypted values, i.e.  C_1'[i] = 
+					decryptedBlock[i] ^ XORtarget 
+			(ii) Now iterate over acsiis until you find the ascii s.t. 
+			C_1'[curr_index]^C_2[curr_index] = XORtarget. Then the plaintext
+			val is ascii ^ C_1[curr_index]
+			(iii) Store ascii in decryptedBlock & plaintext in plaintext buffer
+			 
+    After 16 iterations, you have filled the corresponding plaintext block.
 
-        (i) Moving from the back of the block, find the modification of C_1 s.t. 
-        D(C_2) ^ C_1' terminates with \x[n].
-        (ii) When you've done this n times, you now have D(C_2)[16-n] = C_1'[16-n] ^ \x[n] 
 
-    After 16 iterations, you have the entire block D(C_2), from which you can
-	calculate C_2 = D(C_2) ^ C_1...
+    Initially, I implemented this attack imperfectly, so that it was fucking up
+	the last block around half of the time. This was because the padding in the 
+	final block increases the likelihood of circumstantial padding-validity 
+	dramatically. My code had asumed that if I insert, say, \x10 into C_1'[15], 
+	then when I send C_1', C_2 off the oracle and get a positive response, that 
+	means D(C_2)[15] = C_1'[15] ^ \x01. But it could be that D(C_2)[15] = 
+	C_1'[15] ^ \xn if P_2 ends with \xn\xn\xn\xn... 
 
-
-	Initially, I implemented this attack imperfectly, so that it was fucking up the last block 
-	around half of the time. This was because the padding increases the likelihood of circumstantial 
-	padding-validity dramatically. My code had asumed that if I insert, say, \x10 into C_1'[15], 
-	then when I send C_1', C_2 off the oracle and get a positive response, that means D(C_2)[15] 
-	= C_1'[15] ^ \x01. But it could be that D(C_2)[15] = C_1'[15] ^ \x04 if P_2 ends with 
-	\x04\x04\x04\x04! 
-
-	I got around this problem with this mad hack:
-		if hackedVal^prevblock[blockIdx] == 1 && bs+16 == len(ciphertext) {
-			continue
-		}
-	I use the word 'hack' deliberately, because this condition basically just has the effect of
-	assuming that the plaintext is never padded with a single \x01 at the end. 15/16 times this won't be 
-	the case; the alternative was worse... Sure, I could fully solve the problem, but I can't think of a
-	way of doing so that wouldn't mess up my elegant code.
+	I got around this problem as follows:
+		If in last block having selected C_1'[15] s.t. oracle verdict is "valid":
+			If C_1'[15] == C_1[15]:
+				Modify C_1'[14] then send (C_1',C_2) to oracle. 
+				If you still get valid padding:
+					P_2 must be padded with \x01. So proceed as usual.
+				Else: 
+					P2 has extra padding & you haven't yet found C_1'[15]
+					s.t. C_1'[15]^D(C_2)[15] = \x01. So keep looking for this.
+	
+					
+	So now this is a fully rigorous implementation. The chance of a fail is very low.
 */
 
 func paddingOracleAttack() []byte { 
@@ -130,9 +137,15 @@ func paddingOracleAttack() []byte {
 				if checkLine(cipherblock, prevblockMut) == true { 
 					//hackedVal = D(C_2)[n]
 					hackedVal = byte(ascii) ^ byte(XORtarget)
-					//mad hackz... explainer below
-					if hackedVal^prevblock[blockIdx] == 1 && bs+16 == len(ciphertext) {
-						continue
+					//mad hackz... explainer above
+					if bs+16 == len(ciphertext) {
+						if blockIdx == 15 && prevblockMut[blockIdx] == prevblock[blockIdx] {
+							prevblockMut[14] = prevblockMut[14]+1
+							//padding doesn't organically terminate with 1
+							if checkLine(cipherblock, prevblockMut) == false {
+								continue
+							}
+						}
 					}
 					break
 				}
