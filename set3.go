@@ -82,7 +82,7 @@ func testFunctions() {
 			(ii) Now iterate over acsiis until you find the ascii s.t. 
 			C_1'[curr_index]^C_2[curr_index] = XORtarget. Then the plaintext
 			val is ascii ^ XORtarget ^ C_1[15]
-			(iii) Store ascii in decryptedBlock & plaintext in plaintext buffer
+			(iii) Store ascii ^ XORtarget in decryptedBlock & plaintext in plaintext buffer
 			 
     After 16 iterations, you have filled the corresponding plaintext block.
 
