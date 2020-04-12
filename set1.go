@@ -182,7 +182,7 @@ func decodeXORCipher(input []byte) decipheredData {
 
 //challenge4 main.. piggybacks on 3
 func computeMeaningfulString() decipheredData { 
-	f, err := os.Open("challenge4.txt")
+	f, err := os.Open("set1_data/challenge4.txt")
 	if err != nil {
 		panic(err)
 	}

@@ -165,6 +165,8 @@ func executeSetThree(challengeNum, input string) {
 		inText = output
 		output1 := cryptAes128CTR(inText, key, nonce)
 		fmt.Println(base64.StdEncoding.EncodeToString(output1))
+	} else if challengeNum == "3" {
+		fixedNonceCTR()
 	}
-	return
+	return 
 }
