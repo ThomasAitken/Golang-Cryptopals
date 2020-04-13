@@ -12,3 +12,5 @@ Working through these in Golang. Learning the language as I re-learn (or learn i
   My count restarts at the beginning of every set (sunk-cost). Challenge-specific file inputs don't need to be specified on the command-line. Have a gander at set%d_data for the given set %d to see which challenges have file inputs.
 
 Skipped challenge 15/2.6 because it was just an annoying variation on the already extremely silly challenge 2.4. Hating set 2.
+
+... Luckily, Set 3 is good again.
