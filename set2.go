@@ -1,22 +1,22 @@
 package main
 
 import (
+	"crypto/aes"
+	random "crypto/rand"
 	"fmt"
-    "math/rand"
-    "time"
-    "crypto/aes"
-    random "crypto/rand"
-    "strings"
+	"math/rand"
+	"strings"
+	"time"
 )
 
 //challenge1 main
 func padPlaintext(plaintext []byte, desiredSize int) []byte {
-    padding := make([]byte, desiredSize-len(plaintext))
-    for i := 0; i < len(padding); i ++ {
-      padding[i] = byte(desiredSize-len(plaintext))
-    }
-    plaintext = append(plaintext, padding...)
-    return plaintext
+	padding := make([]byte, desiredSize-len(plaintext))
+	for i := 0; i < len(padding); i++ {
+		padding[i] = byte(desiredSize - len(plaintext))
+	}
+	plaintext = append(plaintext, padding...)
+	return plaintext
 }
 
 //challenge2 nonsense
@@ -46,79 +46,79 @@ func padPlaintext(plaintext []byte, desiredSize int) []byte {
 */
 
 //helper
-func addPKCS7Pad(plaintext []byte) []byte { 
-    modVal := len(plaintext)%16
-    padding := make([]byte, 16-modVal)
-    for i := 0; i < len(padding); i ++ {
-        padding[i] = byte(len(padding))
-    }
-    plaintext = append(plaintext, padding...)
-    return plaintext
+func addPKCS7Pad(plaintext []byte) []byte {
+	modVal := len(plaintext) % 16
+	padding := make([]byte, 16-modVal)
+	for i := 0; i < len(padding); i++ {
+		padding[i] = byte(len(padding))
+	}
+	plaintext = append(plaintext, padding...)
+	return plaintext
 }
 
 //helper: validates padding then removes
 func removePKCS7Pad(plaintext []byte) []byte {
-    finIdx := len(plaintext)-1 
-    finValue := int(plaintext[finIdx])
-    if finValue == 0 {
-        return nil
-    }
-    //validate padding
-    for i := finIdx; i > finIdx-finValue; i -- { 
-        if int(plaintext[i]) != finValue { 
-            // fmt.Println("Decryption failed!")
-            return nil
-        } 
-    }
-    plaintext = plaintext[:len(plaintext)-finValue]
-    if plaintext == nil {
-        plaintext = make([]byte, 16)
-    }
-    return plaintext
+	finIdx := len(plaintext) - 1
+	finValue := int(plaintext[finIdx])
+	if finValue == 0 {
+		return nil
+	}
+	//validate padding
+	for i := finIdx; i > finIdx-finValue; i-- {
+		if int(plaintext[i]) != finValue {
+			// fmt.Println("Decryption failed!")
+			return nil
+		}
+	}
+	plaintext = plaintext[:len(plaintext)-finValue]
+	if plaintext == nil {
+		plaintext = make([]byte, 16)
+	}
+	return plaintext
 }
 
-func encryptAes128ECB(plaintext, key []byte) []byte { 
-    cipher, _ := aes.NewCipher([]byte(key))
-    plaintext = addPKCS7Pad(plaintext)
-    ciphertext := make([]byte, len(plaintext))
-    size := 16
-    for bs, be := 0, size; bs < len(plaintext); bs, be = bs+size, be+size {
-        cipher.Encrypt(ciphertext[bs:be], plaintext[bs:be])
-    }
-    return ciphertext
+func encryptAes128ECB(plaintext, key []byte) []byte {
+	cipher, _ := aes.NewCipher([]byte(key))
+	plaintext = addPKCS7Pad(plaintext)
+	ciphertext := make([]byte, len(plaintext))
+	size := 16
+	for bs, be := 0, size; bs < len(plaintext); bs, be = bs+size, be+size {
+		cipher.Encrypt(ciphertext[bs:be], plaintext[bs:be])
+	}
+	return ciphertext
 }
 
 func encryptAes128CBC(plaintext, key, iv []byte) []byte {
-    cipher, _ := aes.NewCipher([]byte(key))
-    plaintext = addPKCS7Pad(plaintext)
-    ciphertext := make([]byte, len(plaintext))
-    size := 16
-    prevBlock := iv
-    //doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Encrypt')
-    for bs, be := 0, size; bs < len(plaintext); bs, be = bs+size, be+size {
-        copy(ciphertext[bs:be], fixedXOR(prevBlock, plaintext[bs:be]))
-        cipher.Encrypt(ciphertext[bs:be], ciphertext[bs:be])
-        prevBlock = ciphertext[bs:be]
-    }
-    return ciphertext
+	cipher, _ := aes.NewCipher([]byte(key))
+	plaintext = addPKCS7Pad(plaintext)
+	ciphertext := make([]byte, len(plaintext))
+	size := 16
+	prevBlock := iv
+	//doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Encrypt')
+	for bs, be := 0, size; bs < len(plaintext); bs, be = bs+size, be+size {
+		copy(ciphertext[bs:be], fixedXOR(prevBlock, plaintext[bs:be]))
+		cipher.Encrypt(ciphertext[bs:be], ciphertext[bs:be])
+		prevBlock = ciphertext[bs:be]
+	}
+	return ciphertext
 }
 
-func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte { 
-    cipher, _ := aes.NewCipher([]byte(key))
-    plaintext := make([]byte, len(ciphertext))
-    size := 16
-    prevBlock := iv
-    //doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Decrypt')
-    for bs, be := 0, size; bs < len(ciphertext); bs, be = bs+size, be+size {
-        cipher.Decrypt(plaintext[bs:be], ciphertext[bs:be])
-        //'plaintext' is not plain text until this operation.. symmetrically with use of 'ciphertext' above
-        copy(plaintext[bs:be], fixedXOR(prevBlock, plaintext[bs:be]))
-        prevBlock = ciphertext[bs:be]
-    }
-    if padding == true {
-        plaintext = removePKCS7Pad(plaintext)
-    }
-    return plaintext
+func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
+	cipher, _ := aes.NewCipher([]byte(key))
+	plaintext := make([]byte, len(ciphertext))
+	size := 16
+	prevBlock := iv
+	//doing 'manual' application of XOR as instructed rather than using library functions (beyond 'cipher.Decrypt')
+	for bs, be := 0, size; bs < len(ciphertext); bs, be = bs+size, be+size {
+		cipher.Decrypt(plaintext[bs:be], ciphertext[bs:be])
+		//'plaintext' is not plain text until this operation.. symmetrically with use of 'ciphertext' above
+		copy(plaintext[bs:be], fixedXOR(prevBlock, plaintext[bs:be]))
+		prevBlock = ciphertext[bs:be]
+	}
+	if padding == true {
+		plaintext = removePKCS7Pad(plaintext)
+	}
+	return plaintext
 }
 
 /*
@@ -167,97 +167,97 @@ func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
   have, and that this challenge is silly.
 */
 
-func randBytes(size int) []byte { 
-    output := make([]byte,size)
-    _, err := random.Read(output)
+func randBytes(size int) []byte {
+	output := make([]byte, size)
+	_, err := random.Read(output)
 	if err != nil {
-        panic(err)
+		panic(err)
 	}
-    return output
+	return output
 }
 
-func addRandBytes(plaintext []byte, start, end int) []byte { 
-    rand.Seed(time.Now().UnixNano())
-    n := rand.Intn(end-start)+start
-    m := rand.Intn(end-start)+start
+func addRandBytes(plaintext []byte, start, end int) []byte {
+	rand.Seed(time.Now().UnixNano())
+	n := rand.Intn(end-start) + start
+	m := rand.Intn(end-start) + start
 
-    newPlaintext := make([]byte, len(plaintext)+n+m)
-    startRand := randBytes(n)
-    endRand := randBytes(m)
-    plaintext = append(plaintext, endRand...)
-    newPlaintext = append(startRand, plaintext...)
-    fmt.Println("plaintext", newPlaintext)
-    return newPlaintext
+	newPlaintext := make([]byte, len(plaintext)+n+m)
+	startRand := randBytes(n)
+	endRand := randBytes(m)
+	plaintext = append(plaintext, endRand...)
+	newPlaintext = append(startRand, plaintext...)
+	fmt.Println("plaintext", newPlaintext)
+	return newPlaintext
 }
 
-func randAESEncrypt(plaintext []byte) ([]byte, int) { 
-    key := randBytes(16)
-    // //I know it's stupid but that's what they wanted me to do..
-    iv := randBytes(16)
-    messyPlaintext := addRandBytes(plaintext, 5, 11)
-    rand.Seed(time.Now().UnixNano())
-    option := rand.Intn(2)
-    ciphertext := make([]byte, len(messyPlaintext))
-    fmt.Println(option)
-    if option == 0 { 
-        ciphertext = encryptAes128ECB(messyPlaintext, key)
-    } else { 
-        ciphertext = encryptAes128CBC(messyPlaintext, key, iv)
-    }
-    return ciphertext, option
+func randAESEncrypt(plaintext []byte) ([]byte, int) {
+	key := randBytes(16)
+	// //I know it's stupid but that's what they wanted me to do..
+	iv := randBytes(16)
+	messyPlaintext := addRandBytes(plaintext, 5, 11)
+	rand.Seed(time.Now().UnixNano())
+	option := rand.Intn(2)
+	ciphertext := make([]byte, len(messyPlaintext))
+	fmt.Println(option)
+	if option == 0 {
+		ciphertext = encryptAes128ECB(messyPlaintext, key)
+	} else {
+		ciphertext = encryptAes128CBC(messyPlaintext, key, iv)
+	}
+	return ciphertext, option
 }
 
-func identifyMode(ciphertext []byte) string { 
-    var uniqueBlocks [][]byte
-    var repeatCount int
-    for bs, be := 0, 16; be < len(ciphertext); bs, be = bs+16, be+16 {
-        block := ciphertext[bs:be]
-        if contains(uniqueBlocks, block) {
-            repeatCount++
-        } else { 
-            uniqueBlocks = append(uniqueBlocks, block)
-        }
-    }
-    if repeatCount > 0 { 
-        return "ECB"
-    }
-    return "Undetermined"
+func identifyMode(ciphertext []byte) string {
+	var uniqueBlocks [][]byte
+	var repeatCount int
+	for bs, be := 0, 16; be < len(ciphertext); bs, be = bs+16, be+16 {
+		block := ciphertext[bs:be]
+		if contains(uniqueBlocks, block) {
+			repeatCount++
+		} else {
+			uniqueBlocks = append(uniqueBlocks, block)
+		}
+	}
+	if repeatCount > 0 {
+		return "ECB"
+	}
+	return "Undetermined"
 }
 
-func getBlockSize(key []byte) int { 
-    var trueSize int = -1
-    for i := 1; i <= 32; i ++ { 
-        input := make([]byte, i*2)
-        encrypted := encryptAes128ECB(input, key)
-        var j int
-        var firstBlock []byte
-        for bs, be := 0, i; be < len(encrypted); bs, be = bs+i, be+i { 
-            block := encrypted[bs:be]
-            if j == 0 { 
-                firstBlock = block 
-            } else { 
-                if string(block) == string(firstBlock) { 
-                    trueSize = i
-                }
-            }
-            j ++
-        }
-        if trueSize > -1 { 
-            return trueSize
-        } 
-    }
-    return 0
+func getBlockSize(key []byte) int {
+	var trueSize int = -1
+	for i := 1; i <= 32; i++ {
+		input := make([]byte, i*2)
+		encrypted := encryptAes128ECB(input, key)
+		var j int
+		var firstBlock []byte
+		for bs, be := 0, i; be < len(encrypted); bs, be = bs+i, be+i {
+			block := encrypted[bs:be]
+			if j == 0 {
+				firstBlock = block
+			} else {
+				if string(block) == string(firstBlock) {
+					trueSize = i
+				}
+			}
+			j++
+		}
+		if trueSize > -1 {
+			return trueSize
+		}
+	}
+	return 0
 }
 
-func makeReference(prefix, key []byte) map[string]byte { 
-    output := make(map[string]byte)
-    for i := 0; i < 128; i++ { 
-        ascii := byte(i)
-        plainblock := append(prefix, ascii)
-        cipherblock := encryptAes128ECB(plainblock, key)
-        output[string(cipherblock)] = ascii
-    }
-    return output
+func makeReference(prefix, key []byte) map[string]byte {
+	output := make(map[string]byte)
+	for i := 0; i < 128; i++ {
+		ascii := byte(i)
+		plainblock := append(prefix, ascii)
+		cipherblock := encryptAes128ECB(plainblock, key)
+		output[string(cipherblock)] = ascii
+	}
+	return output
 }
 
 /*
@@ -266,7 +266,7 @@ func makeReference(prefix, key []byte) map[string]byte {
   but in the real world you don't have access to the plaintext before it gets
   encrypted lol. Bro why are we prepending characters when we could just read
   the plaintext like wtf are these people smoking? I'm legitimately getting so
-  disillusioned with these 5f82df6094553dece94818be2c42aeca8dad5b45.. 
+  disillusioned with these 5f82df6094553dece94818be2c42aeca8dad5b45..
 
   This challenge shows us how to decrypt some ECB-enciphered ciphertext if we
   have (a) access to the plaintext, and (b) access to the key. I'm laughing.
@@ -278,101 +278,98 @@ func makeReference(prefix, key []byte) map[string]byte {
   As for my implementation below, idgaf if this is what they wanted or not. This
   is the simplest way of doing it 'one byte at a time'. I didn't want to waste
   more time than I had to on this goofy problem.
- */
+*/
 
 //challenge4 nonsense
-func oneByteDecryption(secretText []byte) []byte { 
-    key := randBytes(16)
-    size := getBlockSize(key)
-    // var mode string = identifyMode(ciphertext)
-    prefix := make([]byte, size-1)
-    var cipherblocks map[string]byte = makeReference(prefix, key)
-    deciphered := make([]byte, len(secretText))
-    for i := 0; i < len(secretText); i++ {
-        block := append(prefix, secretText[i])
-        cipherblock := encryptAes128ECB(block, key)
-        for key,val := range cipherblocks { 
-            if key == string(cipherblock) { 
-                deciphered[i] = val
-            }
-        }
-    }
-    return deciphered
+func oneByteDecryption(secretText []byte) []byte {
+	key := randBytes(16)
+	size := getBlockSize(key)
+	// var mode string = identifyMode(ciphertext)
+	prefix := make([]byte, size-1)
+	var cipherblocks map[string]byte = makeReference(prefix, key)
+	deciphered := make([]byte, len(secretText))
+	for i := 0; i < len(secretText); i++ {
+		block := append(prefix, secretText[i])
+		cipherblock := encryptAes128ECB(block, key)
+		for key, val := range cipherblocks {
+			if key == string(cipherblock) {
+				deciphered[i] = val
+			}
+		}
+	}
+	return deciphered
 }
 
 //challenge 5 larks
 
-
 //barely used lol
-func queryToDict(query string) map[string]string { 
-    keyvals := strings.Split(query, "&") 
-    queryDict := make(map[string]string)
-    for _,kv := range keyvals {
-        splitKV := strings.Split(kv, "=")
-        queryDict[splitKV[0]] = splitKV[1]
-    }
-    return queryDict
+func queryToDict(query string) map[string]string {
+	keyvals := strings.Split(query, "&")
+	queryDict := make(map[string]string)
+	for _, kv := range keyvals {
+		splitKV := strings.Split(kv, "=")
+		queryDict[splitKV[0]] = splitKV[1]
+	}
+	return queryDict
 }
 
-func genProfile(email string) string { 
-    email = strings.ReplaceAll(email, "=", "")
-    email = strings.ReplaceAll(email, "&", "")
-    var profile string = "email=" + email + "&uid=10&role=user"
-    return profile
+func genProfile(email string) string {
+	email = strings.ReplaceAll(email, "=", "")
+	email = strings.ReplaceAll(email, "&", "")
+	var profile string = "email=" + email + "&uid=10&role=user"
+	return profile
 }
 
 //another goofy challenge
-func makeMeAdmin() map[string]string { 
-     //the profile string generated from "email=wank@mail.com&uid=10&role=user"
-    //is 36 bytes meaning 'user' will be in its own encryption block
-    var stupidProfile string = genProfile("wank@mail.com")
-    key := randBytes(16)
-    encipheredProfile1 := encryptAes128ECB([]byte(stupidProfile), key)[:32]
-    adminString := string(addPKCS7Pad([]byte("admin")))
-    //admin will be at start of second block. Delicious! And plausible-ish email.
-    var evenStupiderProfile string = genProfile("wank@mail." + adminString)
-    encipheredProfile2 := encryptAes128ECB([]byte(evenStupiderProfile), key)
-    adminCipher := append(encipheredProfile1, encipheredProfile2[16:32]...)
-    adminProfile := string(decryptAes128ECB(adminCipher, key, true))
-    adminDict := queryToDict(adminProfile)
-    return adminDict
+func makeMeAdmin() map[string]string {
+	//the profile string generated from "email=wank@mail.com&uid=10&role=user"
+	//is 36 bytes meaning 'user' will be in its own encryption block
+	var stupidProfile string = genProfile("wank@mail.com")
+	key := randBytes(16)
+	encipheredProfile1 := encryptAes128ECB([]byte(stupidProfile), key)[:32]
+	adminString := string(addPKCS7Pad([]byte("admin")))
+	//admin will be at start of second block. Delicious! And plausible-ish email.
+	var evenStupiderProfile string = genProfile("wank@mail." + adminString)
+	encipheredProfile2 := encryptAes128ECB([]byte(evenStupiderProfile), key)
+	adminCipher := append(encipheredProfile1, encipheredProfile2[16:32]...)
+	adminProfile := string(decryptAes128ECB(adminCipher, key, true))
+	adminDict := queryToDict(adminProfile)
+	return adminDict
 }
 
 //8 helper
 func quoteQueryMeta(query string) string {
-    query = strings.ReplaceAll(query, ";", "%3B")
-    query = strings.ReplaceAll(query, "=", "%3D")
-    return query
+	query = strings.ReplaceAll(query, ";", "%3B")
+	query = strings.ReplaceAll(query, "=", "%3D")
+	return query
 }
 
 func unquoteQueryMeta(query string) string {
-    query = strings.ReplaceAll(query, "%3B", ";")
-    query = strings.ReplaceAll(query, "%3D", "=")
-    return query
+	query = strings.ReplaceAll(query, "%3B", ";")
+	query = strings.ReplaceAll(query, "%3D", "=")
+	return query
 }
 
 //ok I've decided to skip challenge 6 because it's just an annoying variation of challenge 4
 
-
 //challenge 8 nonsense
-func weirdEncrypt(plaintext string, key, iv []byte) []byte { 
-    prefix := "comment1=cooking%20MCs;userdata="
-    suffix := ";comment2=%20like%20a%20pound%20of%20bacon"
-    plainBytes := []byte(quoteQueryMeta(plaintext))
-    plainBytes = append([]byte(prefix), plainBytes...)
-    plainBytes = append(plainBytes, []byte(suffix)...)
-    fmt.Println(string(plainBytes))
-    ciphertext := encryptAes128CBC(plainBytes, key, iv)
-    return ciphertext
+func weirdEncrypt(plaintext string, key, iv []byte) []byte {
+	prefix := "comment1=cooking%20MCs;userdata="
+	suffix := ";comment2=%20like%20a%20pound%20of%20bacon"
+	plainBytes := []byte(quoteQueryMeta(plaintext))
+	plainBytes = append([]byte(prefix), plainBytes...)
+	plainBytes = append(plainBytes, []byte(suffix)...)
+	fmt.Println(string(plainBytes))
+	ciphertext := encryptAes128CBC(plainBytes, key, iv)
+	return ciphertext
 }
 
-
-func identifyAdmin(ciphertext, key, iv []byte) bool { 
-    plaintext := decryptAes128CBC(ciphertext, key, iv, true)
-    if strings.Contains(string(plaintext), ";admin=true;") == true { 
-        return true
-    }
-    return false
+func identifyAdmin(ciphertext, key, iv []byte) bool {
+	plaintext := decryptAes128CBC(ciphertext, key, iv, true)
+	if strings.Contains(string(plaintext), ";admin=true;") == true {
+		return true
+	}
+	return false
 }
 
 //Cryptopals ppl ask us this question: why does CBC mode have this property?
@@ -380,13 +377,12 @@ func identifyAdmin(ciphertext, key, iv []byte) bool {
 //AES-decrypted almost-plaintext of next block.. Elementary, dear Watson
 
 func cbcBitFlip() []byte {
-    attackerInput := ":admin<true:blah"
-    key, iv := randBytes(16), randBytes(16)
-    ciphertext := weirdEncrypt(attackerInput, key, iv)
-    ciphertext[16] = byte(int(ciphertext[16])+1)
-    ciphertext[22] = byte(int(ciphertext[22])-1)
-    ciphertext[27] = byte(int(ciphertext[27])-1)
-    plaintext := decryptAes128CBC(ciphertext, key, iv, true)
-    return plaintext
+	attackerInput := ":admin<true:blah"
+	key, iv := randBytes(16), randBytes(16)
+	ciphertext := weirdEncrypt(attackerInput, key, iv)
+	ciphertext[16] = byte(int(ciphertext[16]) + 1)
+	ciphertext[22] = byte(int(ciphertext[22]) - 1)
+	ciphertext[27] = byte(int(ciphertext[27]) - 1)
+	plaintext := decryptAes128CBC(ciphertext, key, iv, true)
+	return plaintext
 }
-

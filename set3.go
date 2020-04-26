@@ -1,20 +1,21 @@
 package main
 
 import (
+	"bufio"
+	"crypto/aes"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"strings"
-	"math/rand"
-	"time"
-	"crypto/aes"
-	"bufio"
-	"os"
-	"encoding/base64"
 	"math"
+	"math/rand"
+	"os"
+	"strings"
+	"time"
 )
 
 var key []byte
-func encryptLine(optionalInput string) ([]byte, []byte) { 
+
+func encryptLine(optionalInput string) ([]byte, []byte) {
 	var plaintext string
 	if optionalInput == "" {
 		content, err := ioutil.ReadFile("set3_data/challenge1.txt")
@@ -34,12 +35,12 @@ func encryptLine(optionalInput string) ([]byte, []byte) {
 	return ciphertext, iv
 }
 
-func checkLine(ciphertext, iv []byte) bool { 
+func checkLine(ciphertext, iv []byte) bool {
 	plaintext := decryptAes128CBC(ciphertext, key, iv, true)
 	//padding failed
-	if plaintext == nil { 
+	if plaintext == nil {
 		return false
-	} 
+	}
 	return true
 }
 
@@ -71,81 +72,81 @@ func testFunctions() {
       (i.e. C_1' ^ D(C_2)) happened to terminate in \x01 (yes, it could be that
       you've created a text P_2' terminating with \x02\x02 but that requires
       that the penultimate character of the real P_2 happened to be \x02 and
-      that you didn't hit \x02\x01 first while feeding in modified blocks). 
+      that you didn't hit \x02\x01 first while feeding in modified blocks).
 
     So this simple boolean verdict about padding has given you the following:
-		D(C_2) ^ C_1' terminates with \x01 
+		D(C_2) ^ C_1' terminates with \x01
 		=> D(C_2)[15] = C_1'[15] ^ \x01
 
-	This can be generalised to find other characters in D(C_2) as follows: 
-		
-		For curr_index = 15; decrementing: 
-			(i) For i= 15 to i=curr_index+1: 
-					edit C_1'[i] s.t. P_2'[i] = XORtarget (\x02, \x03, etc) 
-					using previously decrypted values, i.e.  C_1'[i] = 
-					decryptedBlock[i] ^ XORtarget 
-			(ii) Now iterate over acsiis until you find the ascii s.t. 
+	This can be generalised to find other characters in D(C_2) as follows:
+
+		For curr_index = 15; decrementing:
+			(i) For i= 15 to i=curr_index+1:
+					edit C_1'[i] s.t. P_2'[i] = XORtarget (\x02, \x03, etc)
+					using previously decrypted values, i.e.  C_1'[i] =
+					decryptedBlock[i] ^ XORtarget
+			(ii) Now iterate over acsiis until you find the ascii s.t.
 			C_1'[curr_index]^C_2[curr_index] = XORtarget. Then the plaintext
 			val is ascii ^ XORtarget ^ C_1[15]
 			(iii) Store ascii ^ XORtarget in decryptedBlock & plaintext in plaintext buffer
-			 
+
     After 16 iterations, you have filled the corresponding plaintext block.
 
 
     Initially, I implemented this attack imperfectly, so that it was fucking up
-	the last block around half of the time. This was because the padding in the 
-	final block increases the likelihood of circumstantial padding-validity 
-	dramatically. My code had asumed that if I insert, say, \x10 into C_1'[15], 
-	then when I send C_1', C_2 off the oracle and get a positive response, that 
-	means D(C_2)[15] = C_1'[15] ^ \x01. But it could be that D(C_2)[15] = 
-	C_1'[15] ^ \xn if P_2 ends with \xn\xn\xn\xn... 
+	the last block around half of the time. This was because the padding in the
+	final block increases the likelihood of circumstantial padding-validity
+	dramatically. My code had asumed that if I insert, say, \x10 into C_1'[15],
+	then when I send C_1', C_2 off the oracle and get a positive response, that
+	means D(C_2)[15] = C_1'[15] ^ \x01. But it could be that D(C_2)[15] =
+	C_1'[15] ^ \xn if P_2 ends with \xn\xn\xn\xn...
 
 	I got around this problem as follows:
 		If in last block having selected C_1'[15] s.t. oracle verdict is "valid":
 			If C_1'[15] == C_1[15]:
-				Modify C_1'[14] then send (C_1',C_2) to oracle. 
+				Modify C_1'[14] then send (C_1',C_2) to oracle.
 				If you still get valid padding:
 					P_2 must be padded with \x01. So proceed as usual.
-				Else: 
+				Else:
 					P_2 has extra padding & you haven't yet found C_1'[15]
 					s.t. C_1'[15]^D(C_2)[15] = \x01. So keep looking for this.
-	
+
 
 	So now this is a fully rigorous implementation. The chance of a fail is very low.
 */
 
-func paddingOracleAttack() []byte { 
+func paddingOracleAttack() []byte {
 	key = randBytes(16)
 	ciphertext, iv := encryptLine("")
 	plaintext := make([]byte, len(ciphertext))
 	// C_1, C_1'
 	prevblock := iv
-	prevblockMut := make([]byte,len(prevblock))
+	prevblockMut := make([]byte, len(prevblock))
 	copy(prevblockMut, prevblock)
 	//block iteration
 	for bs, be := 0, 16; bs < len(ciphertext); bs, be = bs+16, be+16 {
 		var decryptedBlock [16]byte
 		cipherblock := ciphertext[bs:be]
 		//character iteration
-		for blockIdx := 15; blockIdx >= 0; blockIdx -- { 
-			XORtarget := 16-blockIdx
+		for blockIdx := 15; blockIdx >= 0; blockIdx-- {
+			XORtarget := 16 - blockIdx
 			var hackedVal byte
 			/*filling out prevblock with appropriate values to lay ground for padding validation
-				i.e. suppose XORtarget is \x02, then we're changing C_1'[14],[15] with values s.t. P_2'[14], 
-				[15] = \x02. Such values determined by XORing against previous char decryptions.
+			i.e. suppose XORtarget is \x02, then we're changing C_1'[14],[15] with values s.t. P_2'[14],
+			[15] = \x02. Such values determined by XORing against previous char decryptions.
 			*/
-			for j := XORtarget-1; j >= 1; j -- {                                                                                                              
+			for j := XORtarget - 1; j >= 1; j-- {
 				prevblockMut[16-j] = decryptedBlock[16-j] ^ byte(XORtarget)
 			}
-			for ascii := 0; ascii < 256; ascii ++ {
+			for ascii := 0; ascii < 256; ascii++ {
 				prevblockMut[blockIdx] = byte(ascii)
-				if checkLine(cipherblock, prevblockMut) == true { 
+				if checkLine(cipherblock, prevblockMut) == true {
 					//hackedVal = D(C_2)[n]
 					hackedVal = byte(ascii) ^ byte(XORtarget)
 					//mad hackz... explainer above
 					if bs+16 == len(ciphertext) {
 						if blockIdx == 15 && prevblockMut[blockIdx] == prevblock[blockIdx] {
-							prevblockMut[14] = prevblockMut[14]+1
+							prevblockMut[14] = prevblockMut[14] + 1
 							//padding doesn't organically terminate with 1
 							if checkLine(cipherblock, prevblockMut) == false {
 								continue
@@ -156,15 +157,15 @@ func paddingOracleAttack() []byte {
 				}
 			}
 			decryptedBlock[blockIdx] = hackedVal
-			plaintext[bs+blockIdx] = hackedVal^prevblock[blockIdx]
+			plaintext[bs+blockIdx] = hackedVal ^ prevblock[blockIdx]
 		}
 		prevblock = cipherblock
 		copy(prevblockMut, cipherblock)
 	}
-    fmt.Println(plaintext)
+	fmt.Println(plaintext)
 	plaintext = removePKCS7Pad(plaintext)
 	return plaintext
-}	
+}
 
 //challenge 2
 func cryptAes128CTR(inText, key, nonce []byte) []byte {
@@ -179,12 +180,12 @@ func cryptAes128CTR(inText, key, nonce []byte) []byte {
 			be = len(inText)
 		}
 		copy(outText[bs:be], fixedXOR(inText[bs:be], keystream[:be-bs]))
-		counter[0] = counter[0]+1
+		counter[0] = counter[0] + 1
 	}
 	return outText
 }
 
-/* 
+/*
   Challenge explanation:
 
   CTR encryption involves the XORing of a plaintext block with the encrypted
@@ -218,14 +219,14 @@ func cryptAes128CTR(inText, key, nonce []byte) []byte {
 */
 
 //challenge 3 nonsense
-var unigrams = map[byte]float64{'P': 0.02, 'r': 4.49, 'o': 5.82, 'd': 3.87, 'u': 2.05, 'c': 1.75, 
-'e': 10.09, ' ': 17.23, 'b': 1.11, 'y': 1.41, 'C': 0.08, 'l': 3.55, 'h': 5.48, 'a': 6.29, 't': 6.85, '.': 0.94,
-'H': 0.23, 'T': 0.25, 'M': 0.07, 'L': 0.04, 'v': 0.63, 's': 5.15, 'i': 5.23, 'n': 5.55, 'A': 0.15, 'F': 0.05, 
-'w': 1.8, 'f': 2.09, 'Y': 0.02, 'g': 1.66, 'J': 0.02, 'm': 1.82, 'p': 1.27, 'I': 0.16, 'V': 0.01, '"': 0.06, 
-'E': 0.03, 'O': 0.04, ',': 0.79, '1': 0.0, '8': 0.0, 'k': 0.66, ':': 0.13, 'B': 0.08, 'W': 0.07, 'q': 0.07, 
-'S': 0.13, '\'': 0.13, 'U': 0.01, 'D': 0.06, 'R': 0.02, 'K': 0.01, 'N': 0.03, '-': 0.05, 'x': 0.06, '!': 0.05, 
-'z': 0.03, 'j': 0.06, ';': 0.05, '?': 0.08, 'G': 0.07, 'Q': 0.0, '(': 0.0, ')': 0.0, '2': 0.0, '9': 0.0, 'Z': 0.0, 
-'X': 0.0, '3': 0.0, '0': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
+var unigrams = map[byte]float64{'P': 0.02, 'r': 4.49, 'o': 5.82, 'd': 3.87, 'u': 2.05, 'c': 1.75,
+	'e': 10.09, ' ': 17.23, 'b': 1.11, 'y': 1.41, 'C': 0.08, 'l': 3.55, 'h': 5.48, 'a': 6.29, 't': 6.85, '.': 0.94,
+	'H': 0.23, 'T': 0.25, 'M': 0.07, 'L': 0.04, 'v': 0.63, 's': 5.15, 'i': 5.23, 'n': 5.55, 'A': 0.15, 'F': 0.05,
+	'w': 1.8, 'f': 2.09, 'Y': 0.02, 'g': 1.66, 'J': 0.02, 'm': 1.82, 'p': 1.27, 'I': 0.16, 'V': 0.01, '"': 0.06,
+	'E': 0.03, 'O': 0.04, ',': 0.79, '1': 0.0, '8': 0.0, 'k': 0.66, ':': 0.13, 'B': 0.08, 'W': 0.07, 'q': 0.07,
+	'S': 0.13, '\'': 0.13, 'U': 0.01, 'D': 0.06, 'R': 0.02, 'K': 0.01, 'N': 0.03, '-': 0.05, 'x': 0.06, '!': 0.05,
+	'z': 0.03, 'j': 0.06, ';': 0.05, '?': 0.08, 'G': 0.07, 'Q': 0.0, '(': 0.0, ')': 0.0, '2': 0.0, '9': 0.0, 'Z': 0.0,
+	'X': 0.0, '3': 0.0, '0': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
 
 // var duograms = map[string]float64{"ro": 0.43, "od": 0.17, "du": 0.03, "uc": 0.05, "ce": 0.32, "ed": 0.86, "d ": 2.19, " b": 0.74, "by": 0.1, "y ": 0.79, " C": 0.05, "Co": 0.01, "ol": 0.21, "l ": 0.4, "Ch": 0.02, "ho": 0.31, "oa": 0.06, "at": 0.73, "t.": 0.09, ". ": 0.62, "  ": 0.12, " H": 0.16, " v": 0.11, "ve": 0.43, "er": 1.18, "rs": 0.22, "si": 0.27, "io": 0.17, "on": 0.68, "n ": 1.19, " A": 0.11, "Al": 0.01, "Ha": 0.01, "ai": 0.31, "in": 1.56, "ne": 0.43, "es": 0.66, "s.": 0.16, " F": 0.04, "ur": 0.31, "rt": 0.16, "th": 2.4, "he": 2.69, "r ": 0.88, " c": 0.58, "co": 0.31, "or": 0.63, "rr": 0.08, "re": 0.96, "ec": 0.16, "ct": 0.1, "ti": 0.35, "ns": 0.19, "s\n": 0.14, " M": 0.05, "en": 0.87, "nn": 0.05, "no": 0.25, "o ": 0.61, " d": 0.43, "de": 0.39, "e ": 3.2, " L": 0.03, "Le": 0.01, "ee": 0.27, "w.": 0.01, ".\n": 0.3, "A ": 0.04, " P": 0.02, "tr": 0.19, "ra": 0.31, "it": 0.59, "t ": 1.44, " o": 1.21, "of": 0.8, "f ": 0.76, " t": 2.61, "Ar": 0.01, "is": 0.79, "st": 0.63, " a": 1.9, "as": 0.63, "s ": 1.79, "a ": 0.38, " Y": 0.02, "Yo": 0.01, "ou": 0.77, "un": 0.24, "ng": 0.79, "g ": 0.54, "Ma": 0.02, "an": 1.41, "n\n": 0.09, "y\n": 0.05, "am": 0.18, "me": 0.42, " J": 0.01, "Jo": 0.01, "oy": 0.04, "e\n": 0.26, "ha": 0.75, "ap": 0.11, "pt": 0.03, "te": 0.6, " I": 0.14, " V": 0.01, " i": 0.77, "ig": 0.17, "gn": 0.02, "ot": 0.26, "ta": 0.21, "ni": 0.18, "im": 0.32, "mu": 0.07, "um": 0.07, "m ": 0.34, "di": 0.2, "mi": 0.16, "tt": 0.11, "ar": 0.57, ".\"": 0.01, "\"\n": 0.01, "vi": 0.09, "id": 0.22, "d,": 0.1, ", ": 0.72, "et": 0.23, "mo": 0.19, "rp": 0.01, "ph": 0.1, "os": 0.13, "se": 0.54, "s,": 0.13, "On": 0.02, "nc": 0.16, " u": 0.18, "up": 0.11, "po": 0.14, "nd": 1.19, "ry": 0.14, " g": 0.26, "go": 0.08, "oo": 0.24, " w": 1.1, "wa": 0.46, " m": 0.45, "oc": 0.05, "ow": 0.33, "w ": 0.15, "om": 0.32, "g\n": 0.04, "do": 0.13, "wn": 0.08, "al": 0.44, "lo": 0.34, " r": 0.3, "ad": 0.4, "hi": 0.91, "d\n": 0.16, " n": 0.28, "ic": 0.27, " l": 0.47, "li": 0.41, "tl": 0.11, "le": 0.58, "bo": 0.16, "na": 0.1, "ba": 0.08, "ab": 0.1, "tu": 0.13, "ck": 0.14, "o.": 0.01, "..": 0.01, "Hi": 0.04, " f": 0.75, "fa": 0.16, "to": 0.68, "ld": 0.26, " h": 1.5, " s": 1.18, "y:": 0.01, ": ": 0.06, "ok": 0.09, "ke": 0.23, "hr": 0.08, "ug": 0.12, "gh": 0.22, "h ": 0.39, "a\n": 0.04, "gl": 0.07, "la": 0.27, "ss": 0.25, "s:": 0.01, "ir": 0.25, "ac": 0.22, "e.": 0.15, "He": 0.16, " T": 0.17, "Th": 0.21, "ca": 0.2, "wh": 0.27, " B": 0.06, "Be": 0.01, "ty": 0.08, "rn": 0.12, "iv": 0.09, "d:": 0.04, "sh": 0.22, "so": 0.23, "em": 0.22, " p": 0.46, "pl": 0.11, " O": 0.04, "wi": 0.26, "il": 0.29, "bl": 0.13, "ms": 0.06, "gr": 0.12, "sa": 0.18, "g.": 0.03, "wo": 0.19, "h.": 0.02, "Wh": 0.04, " y": 0.13, "yo": 0.13, "u ": 0.08, "we": 0.24, "be": 0.37, "fi": 0.14, "rm": 0.07, "ge": 0.2, "ts": 0.16, "d.": 0.09, "r\n": 0.06, "pu": 0.04, "ut": 0.27, "oi": 0.09, "ls": 0.08, " q": 0.04, "qu": 0.07, "ue": 0.06, "sm": 0.05, "el": 0.42, "ll": 0.47, "l.": 0.04, "r.": 0.07, " S": 0.09, "Sh": 0.01, "ay": 0.2, "ye": 0.1, "pi": 0.08, "ia": 0.05, "o\n": 0.04, "r'": 0.02, "'s": 0.1, "ip": 0.04, "pe": 0.21, "fo": 0.26, "da": 0.13, ":\n": 0.08, ",\n": 0.07, "dd": 0.04, "dy": 0.05, "y,": 0.06, "cl": 0.09, "rl": 0.06, " D": 0.05, "Da": 0.02, "nt": 0.45, "pp": 0.05, "ey": 0.18, "bu": 0.08, "tw": 0.04, "br": 0.1, "ru": 0.07, "us": 0.23, "pr": 0.17, "ma": 0.23, "lv": 0.02, "t\n": 0.09, "k ": 0.17, "Mi": 0.01, "ch": 0.31, "ae": 0.01, "av": 0.11, "k\n": 0.01, "Pa": 0.01, "ga": 0.12, " e": 0.29, "ev": 0.13, "ht": 0.15, "ie": 0.2, "su": 0.11, "pa": 0.16, "nu": 0.02, "mb": 0.07, "n.": 0.07, "if": 0.11, "ff": 0.06, "fe": 0.22, " E": 0.02, "n'": 0.04, " W": 0.06, "p\n": 0.01, "ul": 0.26, "og": 0.03, "gi": 0.08, "e,": 0.11, "ds": 0.11, "sw": 0.04, "ys": 0.06, "ef": 0.09, "rg": 0.03, "cr": 0.1, "ri": 0.37, "ly": 0.29, "af": 0.04, "ft": 0.08, "hu": 0.05, "ud": 0.08, "ea": 0.54, "sy": 0.02, "rb": 0.01, "b ": 0.01, "fl": 0.08, "ew": 0.06, "ik": 0.07, "vy": 0.01, "bi": 0.04, "rd": 0.16, " k": 0.07, "ep": 0.15, "fr": 0.17, "t,": 0.08, "h\n": 0.03, "ei": 0.11, "lt": 0.07, "l\n": 0.03, "ak": 0.08, "y.": 0.07, " R": 0.01, "Ro": 0.01, "t:": 0.01, "ws": 0.03, " N": 0.02, "Na": 0.01, "nk": 0.05, "k.": 0.02, "mp": 0.09, "Fr": 0.01, "e-": 0.01, "An": 0.04, "sk": 0.05, "St": 0.08, "De": 0.02, "lu": 0.07, "ki": 0.08, "Bu": 0.04, "ui": 0.06, "Ca": 0.01, "e'": 0.01, "oe": 0.02, "p ": 0.08, "lf": 0.06, "f.": 0.01, "ex": 0.04, "xp": 0.01, "sp": 0.1, "eg": 0.05, "! ": 0.03, "ub": 0.03, "ny": 0.05, "yt": 0.01, "wr": 0.03, "r,": 0.05, "ze": 0.01, "dr": 0.07, "au": 0.08, "sc": 0.07, "mm": 0.03, "ag": 0.14, "rf": 0.01, "fu": 0.06, "gs": 0.03, "gg": 0.02, "bb": 0.01, "La": 0.01, "aw": 0.08, "dg": 0.02, "op": 0.06, "It": 0.05, "So": 0.01, "ix": 0.01, "ky": 0.01, "rk": 0.06, "ks": 0.02, "s'": 0.01, "sl": 0.06, "m\n": 0.02, "Pe": 0.01, "rh": 0.01, "ps": 0.05, "Do": 0.01, "nw": 0.01, "Bo": 0.01, "nl": 0.06, "m.": 0.04, "my": 0.04, "xt": 0.01, "We": 0.01, "sq": 0.01, "ua": 0.04, "tc": 0.03, "sn": 0.01, "uf": 0.02, "ox": 0.01, "Ho": 0.02, "n!": 0.01, " j": 0.04, "ju": 0.02, "cu": 0.04, "Mo": 0.01, "Br": 0.01, "je": 0.02, "ov": 0.11, "!\n": 0.02, "kn": 0.06, "Fa": 0.01, "vo": 0.06, "m,": 0.03, "w\n": 0.01, "lk": 0.03, "Si": 0.01, "Su": 0.01, "t'": 0.01, "eh": 0.02, "va": 0.04, "Wi": 0.01, "kl": 0.02, "wl": 0.03, "To": 0.01, "lw": 0.01, "e:": 0.01, "nf": 0.03, "ja": 0.01, "py": 0.01, "yb": 0.01, "o,": 0.01, "ek": 0.01, "p.": 0.01, "n,": 0.07, "Sa": 0.01, "eo": 0.02, "Fl": 0.01, "f\n": 0.07, "l,": 0.03, "dl": 0.05, "ci": 0.07, "gu": 0.05, "n?": 0.01, "? ": 0.05, "x ": 0.01, "; ": 0.04, "rc": 0.05, "Wa": 0.01, "r?": 0.01, "s?": 0.01, "dn": 0.01, "hy": 0.04, "?\n": 0.03, "yl": 0.01, "f,": 0.01, "Cl": 0.01, "Ir": 0.01, "g:": 0.01, "e?": 0.01, "No": 0.02, " G": 0.06, "Go": 0.05, "d'": 0.01, "Di": 0.01, "\" ": 0.02, "yi": 0.03, "cs": 0.01, "Mr": 0.02, "Ev": 0.01, "Te": 0.01, "s!": 0.01, "ya": 0.01, "ob": 0.03, "O ": 0.01, "Lo": 0.01, "hs": 0.01, "In": 0.02, "lp": 0.01, "k,": 0.02, "Vi": 0.01, "rv": 0.02, "e!": 0.01, "d;": 0.01, "d?": 0.01, "e;": 0.01, "r:": 0.01, "g,": 0.02, "t?": 0.01, "nr": 0.01, "h,": 0.02, "xi": 0.01, "p,": 0.01, "As": 0.01, "I ": 0.06, " \"": 0.02, "At": 0.01, "cc": 0.01, "ib": 0.03, "mn": 0.02, "w,": 0.01, "y'": 0.01, "oh": 0.01, "Ye": 0.01, "eb": 0.01, "Bl": 0.01, "Du": 0.01, "lm": 0.01, "iz": 0.01, "I'": 0.01, "'t": 0.01, "En": 0.01, "n:": 0.01, "df": 0.01, "c ": 0.02, "jo": 0.01, "nv": 0.01, "cy": 0.01, "wd": 0.01, "Fo": 0.01, "hm": 0.01, "rw": 0.01, "bs": 0.01, "iu": 0.01, "az": 0.01, "zi": 0.01, "s;": 0.01, "sf": 0.01, "yn": 0.01, "hl": 0.01, "bj": 0.01, "Cr": 0.02, "dm": 0.01, "Je": 0.01, "ym": 0.01, "bt": 0.01, "tf": 0.01, "-\n": 0.01, "Ly": 0.01, " -": 0.01}
 
@@ -257,7 +258,7 @@ func findSingles(ciphertexts [][]byte) map[int][]byte {
 		var seenBytes []byte
 		columnRepetitions[i] = make([]byte, 0)
 		for _, ciphertext := range ciphertexts {
-			if i < len(ciphertext) { 
+			if i < len(ciphertext) {
 				if sliceContains(seenBytes, ciphertext[i]) == true {
 					columnRepetitions[i] = append(columnRepetitions[i], ciphertext[i])
 				} else {
@@ -277,15 +278,15 @@ func findSingles(ciphertexts [][]byte) map[int][]byte {
 
 type columnsData struct {
 	Column []byte
-	Index int
+	Index  int
 }
 
 func transpose(columns []columnsData) [][]byte {
-	rows := make([][]byte,len(columns[0].Column))
+	rows := make([][]byte, len(columns[0].Column))
 	for i := 0; i < len(rows); i++ {
 		rows[i] = make([]byte, 16)
-		for j := 0; j < 16; j ++ {
-			for _,col := range columns {
+		for j := 0; j < 16; j++ {
+			for _, col := range columns {
 				index := col.Index
 				column := col.Column
 				if index == j {
@@ -300,7 +301,6 @@ func transpose(columns []columnsData) [][]byte {
 	return rows
 }
 
-
 func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
 	singleRepetitions := findSingles(ciphertexts)
 
@@ -309,9 +309,9 @@ func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
 	var columnsStore []columnsData
 	for key, bytes := range singleRepetitions {
 		var keystreamCandidates []byte
-		for _,candidate := range bytes {
-			for i := 0; i < 60; i ++ {
-				keystreamByte := byte(int(topChars[i][1]))^candidate
+		for _, candidate := range bytes {
+			for i := 0; i < 60; i++ {
+				keystreamByte := byte(int(topChars[i][1])) ^ candidate
 				if sliceContains(keystreamCandidates, keystreamByte) == false {
 					keystreamCandidates = append(keystreamCandidates, keystreamByte)
 				}
@@ -320,19 +320,19 @@ func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
 		var bestTextScore float64 = math.MaxFloat64
 		var bestColumn []byte
 		numRows := float64(len(ciphertexts))
-		for _,candidate := range keystreamCandidates {
+		for _, candidate := range keystreamCandidates {
 			freqDist := make(map[byte]float64)
 			var column []byte
-			for _,row := range ciphertexts {
+			for _, row := range ciphertexts {
 				if key >= len(row) {
 					column = append(column, byte(0))
 					continue
 				}
-				plainByte := row[key]^candidate
+				plainByte := row[key] ^ candidate
 				column = append(column, plainByte)
 				_, exists := freqDist[plainByte]
 				if !exists {
-					freqDist[plainByte] = float64(1)/numRows
+					freqDist[plainByte] = float64(1) / numRows
 				} else {
 					freqDist[plainByte] = freqDist[plainByte] + float64(1)/numRows
 				}
@@ -356,13 +356,13 @@ func fixedNonceCTR() [][]byte {
 	}
 	var line string
 	var ciphertexts [2][][]byte
-	ciphertexts[0] = make([][]byte,0)
-	ciphertexts[1] = make([][]byte,0)
+	ciphertexts[0] = make([][]byte, 0)
+	ciphertexts[1] = make([][]byte, 0)
 	reader := bufio.NewReader(f)
-	nonce := make([]byte,8)
+	nonce := make([]byte, 8)
 	key := randBytes(16)
 	for {
-        line, err = reader.ReadString('\n')
+		line, err = reader.ReadString('\n')
 		line = strings.TrimSuffix(line, "\n")
 		if line == "" {
 			break
@@ -370,7 +370,7 @@ func fixedNonceCTR() [][]byte {
 		data, err := base64.StdEncoding.DecodeString(line)
 		if err != nil {
 			panic(err)
-		} 
+		}
 		ciphertext := cryptAes128CTR(data, key, nonce)
 		plaintext := cryptAes128CTR(ciphertext, key, nonce)
 		fmt.Println(string(plaintext))
@@ -383,7 +383,7 @@ func fixedNonceCTR() [][]byte {
 	plaintexts2 := breakfixedNonceCTR(ciphertexts[1])
 	plaintextsCombined := make([][]byte, len(plaintexts1))
 	for i := 0; i < len(plaintexts1); i++ {
-		fmt.Println(string(plaintexts1[i])+string(plaintexts2[i]))
+		fmt.Println(string(plaintexts1[i]) + string(plaintexts2[i]))
 		plaintextsCombined[i] = append(plaintexts1[i], plaintexts2[i]...)
 	}
 	return plaintextsCombined
