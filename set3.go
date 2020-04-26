@@ -242,6 +242,16 @@ func maxRow(ciphertexts [][]byte) int {
 	return maxLength
 }
 
+func minRow(ciphertexts [][]byte) int {
+	var minLength int = math.MaxInt32
+	for _, ciphertext := range ciphertexts {
+		if len(ciphertext) < minLength {
+			minLength = len(ciphertext)
+		}
+	}
+	return minLength
+}
+
 func sliceContains(slice []byte, entry byte) bool {
 	for _, item := range slice {
 		if int(item) == int(entry) {
@@ -281,11 +291,11 @@ type columnsData struct {
 	Index  int
 }
 
-func transpose(columns []columnsData) [][]byte {
+func transpose(columns []columnsData, blockLength int) [][]byte {
 	rows := make([][]byte, len(columns[0].Column))
 	for i := 0; i < len(rows); i++ {
-		rows[i] = make([]byte, 16)
-		for j := 0; j < 16; j++ {
+		rows[i] = make([]byte, blockLength)
+		for j := 0; j < blockLength; j++ {
 			for _, col := range columns {
 				index := col.Index
 				column := col.Column
@@ -293,15 +303,12 @@ func transpose(columns []columnsData) [][]byte {
 					rows[i][j] = column[i]
 				}
 			}
-			if rows[i][j] == byte(0) {
-				rows[i][j] = byte(32)
-			}
 		}
 	}
 	return rows
 }
 
-func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
+func breakfixedNonceCTR(ciphertexts [][]byte, blockSize int) [][]byte {
 	singleRepetitions := findSingles(ciphertexts)
 
 	//topChars = [FREQUENCY, ASCIINUM] ASCIINUM is byte/int
@@ -325,7 +332,7 @@ func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
 			var column []byte
 			for _, row := range ciphertexts {
 				if key >= len(row) {
-					column = append(column, byte(0))
+					column = append(column, byte(32))
 					continue
 				}
 				plainByte := row[key] ^ candidate
@@ -345,19 +352,41 @@ func breakfixedNonceCTR(ciphertexts [][]byte) [][]byte {
 		}
 		columnsStore = append(columnsStore, columnsData{Column: bestColumn, Index: key})
 	}
-	return transpose(columnsStore)
+	// fmt.Println(columnsStore)
+	return transpose(columnsStore, blockSize)
 }
 
-//challenge 3 main
-func fixedNonceCTR() [][]byte {
-	f, err := os.Open("set3_data/challenge3.txt")
+func textChunks(texts [][]byte, chunkLength int, maxLength int) [][][]byte {
+	var textChunks [][][]byte
+	for bs, be := 0, chunkLength; bs < maxLength; bs, be = bs+chunkLength, be+chunkLength {
+		// chunk := make([][]byte, chunkLength)
+		var chunk [][]byte
+		for _, t := range texts {
+			if be < len(t) {
+				chunk = append(chunk, t[bs:be])
+			} else {
+				if bs < len(t) {
+					chunk = append(chunk, t[bs:len(t)])
+				} else {
+					var x []byte
+					chunk = append(chunk, x)
+				}
+			}
+		}
+		textChunks = append(textChunks, chunk)
+	}
+	// fmt.Println(textChunks)
+	return textChunks
+}
+
+//challenge 3, 4 main
+func fixedNonceCTR(filepath string) {
+	f, err := os.Open(filepath)
 	if err != nil {
 		panic(err)
 	}
 	var line string
-	var ciphertexts [2][][]byte
-	ciphertexts[0] = make([][]byte, 0)
-	ciphertexts[1] = make([][]byte, 0)
+	var ciphertexts [][]byte
 	reader := bufio.NewReader(f)
 	nonce := make([]byte, 8)
 	key := randBytes(16)
@@ -372,19 +401,28 @@ func fixedNonceCTR() [][]byte {
 			panic(err)
 		}
 		ciphertext := cryptAes128CTR(data, key, nonce)
-		plaintext := cryptAes128CTR(ciphertext, key, nonce)
-		fmt.Println(string(plaintext))
-		ciphertexts[0] = append(ciphertexts[0], ciphertext[:16])
-		ciphertexts[1] = append(ciphertexts[1], ciphertext[16:len(ciphertext)])
+		// plaintext := cryptAes128CTR(ciphertext, key, nonce)
+		ciphertexts = append(ciphertexts, ciphertext)
 	}
-	fmt.Println()
-	// fmt.Println("I'm heere")
-	plaintexts1 := breakfixedNonceCTR(ciphertexts[0])
-	plaintexts2 := breakfixedNonceCTR(ciphertexts[1])
-	plaintextsCombined := make([][]byte, len(plaintexts1))
-	for i := 0; i < len(plaintexts1); i++ {
-		fmt.Println(string(plaintexts1[i]) + string(plaintexts2[i]))
-		plaintextsCombined[i] = append(plaintexts1[i], plaintexts2[i]...)
+	// fmt.Println()
+	//block length
+	minRowLength := minRow(ciphertexts)
+	maxRowLength := maxRow(ciphertexts)
+
+	cipherChunks := textChunks(ciphertexts, minRowLength, maxRowLength)
+	var plaintextsMeta [][][]byte
+
+	for _, chunk := range cipherChunks {
+		plaintextChunk := breakfixedNonceCTR(chunk, minRowLength)
+		plaintextsMeta = append(plaintextsMeta, plaintextChunk)
 	}
-	return plaintextsCombined
+	// fmt.Println(len(plaintextsMeta))
+	for i := 0; i < len(plaintextsMeta[0]); i++ {
+		var toPrint string
+		for _, plaintexts := range plaintextsMeta {
+			toPrint = toPrint + string(plaintexts[i])
+			// fmt.Println(string(plaintexts[i]))
+		}
+		fmt.Println(toPrint)
+	}
 }
