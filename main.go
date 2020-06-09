@@ -38,6 +38,11 @@ func main() {
 			input = os.Args[3]
 		}
 		executeSetThree(challengeNum, input)
+	} else if setNum == "4" {
+		if len(os.Args) > 3 {
+			input = os.Args[3]
+		}
+		executeSetFour(challengeNum, input)
 	}
 	return
 }
@@ -169,6 +174,13 @@ func executeSetThree(challengeNum, input string) {
 		fixedNonceCTR("set3_data/challenge3.txt")
 	} else if challengeNum == "4" {
 		fixedNonceCTR("set3_data/challenge4.txt")
+	}
+	return
+}
+
+func executeSetFour(challengeNum, input string) {
+	if challengeNum == "1" {
+		recoverPlaintextCTR("set2_data/challenge10.txt")
 	}
 	return
 }

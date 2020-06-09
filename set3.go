@@ -426,3 +426,96 @@ func fixedNonceCTR(filepath string) {
 		fmt.Println(toPrint)
 	}
 }
+
+/*
+  Can't say I'm proud of myself for this but decided to skip implementing the
+  Mersenne Twister (MT19937) algorithm for generating pseudo-random numbers
+  seeing as I don't understand the mathematics underlying it and not sure the
+  point of spending at least half an hour porting the Wikipedia pseudocode into
+  my own idiom of Go (especially when there is already a built-in Go
+  implementation of this algorithm
+  (https://forum.golangbridge.org/t/go-math-rand-algorithm/13142/4)). Another
+  reason not to bother is that the actual challenges don't give you any reason
+  to perform a full implementation. In fact, I have my doubts that the creators
+  of these challenges ever implemented this algorithm, seeing as how they
+  literally have nothing to say about the algorithm, simply directing you to
+  Wikipedia.
+
+  I was originally planning to skip ahead to the 7th challenge of Set 3 (i.e.
+  challenge 23), which asks you to program the inverse of the "tempering transform"
+  executed by the Mersenne Twister, so that you can work out the number value
+  that was the input to the transform via the output. But that proved too much
+  hassle for me so for the moment I'm just skipping to set 4
+*/
+
+// func MTTemper(n int) int {
+// 	n, r := 624, 31
+// 	a := 0x9908B0DF
+// 	u, d := 11, 0xFFFFFFFF
+// 	s, b := 7, 0x9D2C5680
+// 	t, c := 15, 0xEFC60000
+// 	l := 18
+// 	f := 1812433253
+
+// 	y := n ^ ((n >> u) & d)
+// 	y = y ^ ((y << s) & b)
+// 	y = y ^ ((y << t) & c)
+// 	out := y ^ (y >> l)
+// 	return out
+// }
+
+// func reverseBits(n int) int {
+// 	var reversedN int
+// 	for i := 31; i >= 0; i -- {
+// 		reversedN += ((n >> i)%2)*Math.pow(2, 31-i)
+// 	}
+// 	return reversedN
+// }
+
+// func invertShiftMaskXor(y int, direction string, shift int, mask int) {
+
+// 	if direction == "left" {
+// 		y = reverseBits(y)
+// 		mask = reverseBits(mask)
+// 	}
+
+// 	var x int
+// 	for n in range(32):
+// 		if n < shift:
+// 			x[n] = y[n]
+// 		else:
+// 			x[n] = y[n] ^ (mask[n] & x[n-shift])
+
+// 	if direction == 'left':
+// 		x.reverse()
+
+// 	return bit_list_to_int(x)
+// }
+
+// func untemper(y) {
+//     (w, n, m, r) = (32, 624, 397, 31)
+//     a = 0x9908B0DF
+//     (u, d) = (11, 0xFFFFFFFF)
+//     (s, b) = (7, 0x9D2C5680)
+//     (t, c) = (15, 0xEFC60000)
+//     l = 18
+//     f = 1812433253
+
+//     xx := y
+//     xx = invert_shift_mask_xor(xx, direction='right', shift=l)
+//     xx = invert_shift_mask_xor(xx, direction='left', shift=t, mask=c)
+//     xx = invert_shift_mask_xor(xx, direction='left', shift=s, mask=b)
+//     xx = invert_shift_mask_xor(xx, direction='right', shift=u, mask=d)
+
+// 	return xx
+// }
+
+// # testing
+// from random import randint
+// from libmatasano import html_test
+// for _ in range(10):
+//     x = randint(0, 0xFFFFFFF)
+//     y = MT_temper(x)
+//     assert untemper(y) == x
+
+// html_test(True)
