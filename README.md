@@ -14,3 +14,8 @@ Working through these in Golang. Learning the language as I re-learn (or learn i
 Skipped challenge 15/2.6 because it was just an annoying variation on the already extremely silly challenge 2.4. Hating set 2.
 
 ... Luckily, Set 3 is good again.
+
+##### Update on June 9 2020:
+Took a long break, and when I returned, I decided to skip basically the entire second half of Set 3 for reasons I go into in a long comment in *set3.go*. The short version is: a combination of the fact that the challenges themselves are clearly lazy and my getting a little lazier personally. Honestly, though, there is absolutely no reason for me to implement my own version of the Mersenne Twister RNG - it seems to be the mathematical equivalent of a whirpool (I don't want to know about any algorithm with that many constants)... And it has been implemented a bajilion times before.
+
+On another topic, I continue to be surprised by how poorly written these challenges are, given their popularity and continued use. Why don't they get updated for clarity? I almost feel like some of the time the ambiguity is there to hide the fact that the challenge itself is lame/stupid.
