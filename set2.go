@@ -40,7 +40,7 @@ func padPlaintext(plaintext []byte, desiredSize int) []byte {
   exposition. It has caused me to waste some time. And my time is precious
   goddamnit!
 
-  Also I'm mad at these fuckers for not telling me that the 10.txt is base64
+  Also I'm mad at these people for not telling me that the 10.txt is base64
   encoded after the AES encryption.. EXTREMELY MAD. Maybe it should have been
   obvious... but nah
 */
@@ -153,7 +153,7 @@ func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
 
   It was only by looking at a couple of other people's approach to this task
   that I discovered that others decided that the task is just asking for
-  basic-bitch ECB detection and that they're not really expecting you to create
+  basic ECB detection and that they're not really expecting you to create
   anything very useful or robust. And I guess the logic of the random bytes at
   the beginning and the end is just to slightly fuck you over... (But like
   wtf?). The two people's code I looked at just tested their detection oracle on
@@ -261,11 +261,11 @@ func makeReference(prefix, key []byte) map[string]byte {
 }
 
 /*
-  Time for me to rant again. WTF is the point of this problem? They're claiming
+  Time for me to rant again. What is the point of this problem? They're claiming
   that after this challenge we now know how to decrypt AES128ECB ciphertexts..
   but in the real world you don't have access to the plaintext before it gets
-  encrypted lol. Bro why are we prepending characters when we could just read
-  the plaintext like wtf are these people smoking? I'm legitimately getting so
+  encrypted lol. Why are we prepending characters when we could just read
+  the plaintext like what are these people smoking? I'm legitimately getting so
   disillusioned with these 5f82df6094553dece94818be2c42aeca8dad5b45..
 
   This challenge shows us how to decrypt some ECB-enciphered ciphertext if we
@@ -275,7 +275,7 @@ func makeReference(prefix, key []byte) map[string]byte {
   this scenario, because otherwise they wouldn't teach us it, right? But I can't
   think of one. So far, Set 2 has been a pure cringe compilation.
 
-  As for my implementation below, idgaf if this is what they wanted or not. This
+  As for my implementation below, idk if this is what they wanted or not. This
   is the simplest way of doing it 'one byte at a time'. I didn't want to waste
   more time than I had to on this goofy problem.
 */
