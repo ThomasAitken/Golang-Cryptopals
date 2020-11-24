@@ -142,7 +142,7 @@ func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
   randomly appended bytes attached to the beginning and to the end. 'What is the
   meaning of this?,' I thought to myself. 'They want me to exploit padding info
   somehow??' So I began to think I was supposed to use a technique beyond
-  basic-bitch ECB detection via repeated blocks, which thereby sent me on a path
+  basic ECB detection via repeated blocks, which thereby sent me on a path
   to thinking that I was perhaps meant to implement this:
   https://en.wikipedia.org/wiki/Padding_oracle_attack. To make matters worse,
   the sentence mentioning the appendage of bytes to the beginning and end of the
