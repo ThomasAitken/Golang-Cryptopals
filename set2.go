@@ -155,10 +155,9 @@ func decryptAes128CBC(ciphertext, key, iv []byte, padding bool) []byte {
   that I discovered that others decided that the task is just asking for
   basic ECB detection and that they're not really expecting you to create
   anything very useful or robust. And I guess the logic of the random bytes at
-  the beginning and the end is just to slightly fuck you over... (But like
-  wtf?). The two people's code I looked at just tested their detection oracle on
-  plaintext which consisted entirely of the same character!!! So yeah. Good
-  effort, SOHKBqM0TOUK/XEzTC9m9A==!
+  the beginning and the end is just to slightly screw you over. The two people's 
+  code I looked at just tested their detection oracle on plaintext which consisted 
+  entirely of the same character!!! So yeah. Good effort, SOHKBqM0TOUK/XEzTC9m9A==!
 
   ... Curious to see if you can actually detect ECB-mode on normal English
   plaintext, I decided to see if some of the early few pages from Portrait of
